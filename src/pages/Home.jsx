@@ -56,10 +56,10 @@ const Home = () => {
 
           
           <h1 className="text-6xl md:text-8xl font-bold mb-8 tracking-tight animate-fade-in-up">
-            <span className="block bg-gradient-to-r from-white via-gray-100 to-white bg-clip-text text-transparent">
+            <span className="block text-white">
               COLOR GRADING
             </span>
-            <span className="block text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 mt-2">
+            <span className="block text-gray-300 mt-2">
               FOR PREMIUM CONTENT
             </span>
           </h1>
