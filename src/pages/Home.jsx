@@ -52,39 +52,44 @@ const Home = () => {
         </div>
 
         {/* Hero Content */}
-        <div className="relative z-10 text-center max-w-5xl mx-auto px-4">
+        <div className="relative z-10 text-center w-full h-full flex flex-col items-center justify-center px-4">
+          {/* Video Reel Placeholder */}
+          <video 
+            className="absolute inset-0 w-full h-full object-cover z-0"
+            src="https://www.w3schools.com/html/mov_bbb.mp4" 
+            autoPlay 
+            loop 
+            muted 
+            playsInline
+          />
+          <div className="absolute inset-0 bg-black/50 z-10"></div> {/* Overlay para legibilidade */}
 
-          
-          <h1 className="text-6xl md:text-8xl font-bold mb-8 tracking-tight animate-fade-in-up">
-            <span className="block text-white">
-              COLOR GRADING
-            </span>
-            <span className="block text-gray-300 mt-2">
-              FOR PREMIUM CONTENT
-            </span>
-          </h1>
-
-          <div className="flex flex-col sm:flex-row gap-6 justify-center items-center animate-fade-in-up delay-300">
-            <Button
-              size="lg"
-              className="bg-gradient-to-r from-blue-500 to-purple-500 text-white hover:from-blue-600 hover:to-purple-600 px-10 py-4 text-lg font-semibold rounded-full shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
-              asChild
-            >
-              <Link to="/portfolio">
-                Ver Portfólio
-                <ArrowRight className="ml-2" size={20} />
-              </Link>
-            </Button>
-            
-            <Button
-              variant="outline"
-              size="lg"
-              className="border-2 border-white/50 text-white hover:bg-white hover:text-black px-10 py-4 text-lg rounded-full backdrop-blur-sm transition-all duration-300 transform hover:scale-105"
-              onClick={() => setIsVideoPlaying(true)}
-            >
-              <Play className="mr-2" size={20} />
-              Assistir Reel
-            </Button>
+          <div className="relative z-20 animate-fade-in-up">
+            <p className="text-3xl md:text-5xl font-serif italic text-white mb-8 leading-tight">
+              "Onde a cor encontra a emoção: Elevando sua narrativa através da cor."
+            </p>
+            <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">
+              <Button
+                size="lg"
+                className="bg-gradient-to-r from-blue-500 to-purple-500 text-white hover:from-blue-600 hover:to-purple-600 px-10 py-4 text-lg font-semibold rounded-full shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+                asChild
+              >
+                <Link to="/portfolio">
+                  Ver Portfólio
+                  <ArrowRight className="ml-2" size={20} />
+                </Link>
+              </Button>
+              
+              <Button
+                variant="outline"
+                size="lg"
+                className="border-2 border-white/50 text-white hover:bg-white hover:text-black px-10 py-4 text-lg rounded-full backdrop-blur-sm transition-all duration-300 transform hover:scale-105"
+                onClick={() => setIsVideoPlaying(true)}
+              >
+                <Play className="mr-2" size={20} />
+                Assistir Reel
+              </Button>
+            </div>
           </div>
         </div>
 
