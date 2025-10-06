@@ -53,11 +53,7 @@ const Home = () => {
 
         {/* Hero Content */}
         <div className="relative z-10 text-center max-w-5xl mx-auto px-4">
-          {/* Dolby Vision Badge */}
-          <div className="inline-flex items-center px-4 py-2 bg-white/10 backdrop-blur-sm rounded-full border border-white/20 mb-8 animate-fade-in">
-            <Award size={16} className="text-yellow-400 mr-2" />
-            <span className="text-sm font-medium text-white">Dolby Vision Certified</span>
-          </div>
+
           
           <h1 className="text-6xl md:text-8xl font-bold mb-8 tracking-tight animate-fade-in-up">
             <span className="block bg-gradient-to-r from-white via-gray-100 to-white bg-clip-text text-transparent">

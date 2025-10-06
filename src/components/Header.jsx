@@ -29,7 +29,7 @@ const Header = () => {
               <span className="text-xs text-gray-300 font-normal tracking-widest">COLOR ARTIST</span>
             </div>
             <div className="flex items-center px-2 py-1 bg-yellow-500/20 rounded border border-yellow-500/30">
-              <span className="text-xs font-medium text-yellow-400">DOLBY VISION</span>
+              <span className="text-xs font-medium text-yellow-400">Dolby Vision Certified</span>
             </div>
           </Link>
 
