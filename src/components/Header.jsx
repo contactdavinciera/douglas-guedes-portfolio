@@ -23,8 +23,9 @@ const Header = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
-          <Link to="/" className="text-white font-bold text-xl tracking-wider">
-            DOUGLAS GUEDES
+          <Link to="/" className="flex flex-col text-white font-bold tracking-wider hover:opacity-80 transition-opacity duration-200">
+            <span className="text-xl">DOUGLAS GUEDES</span>
+            <span className="text-xs text-gray-300 font-normal tracking-widest">COLOR ARTIST</span>
           </Link>
 
           {/* Desktop Navigation */}

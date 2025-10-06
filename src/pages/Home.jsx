@@ -24,39 +24,43 @@ const Home = () => {
     <div className="min-h-screen bg-black text-white">
       {/* Hero Section */}
       <section className="relative h-screen flex items-center justify-center overflow-hidden">
-        {/* Background Video Placeholder */}
+        {/* Animated Background */}
         <div className="absolute inset-0 bg-gradient-to-br from-black via-gray-900 to-black">
-          <div className="absolute inset-0 bg-black/50"></div>
-          {/* Placeholder para o reel - será substituído por vídeo real */}
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-full h-full bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center">
-              <div className="text-center space-y-4">
-                <div className="w-24 h-24 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-8">
-                  <Play size={32} className="text-white ml-1" />
-                </div>
-                <p className="text-gray-400 text-sm">Demo Reel Preview</p>
-              </div>
-            </div>
+          {/* Color Grading Bars Animation */}
+          <div className="absolute inset-0 opacity-20">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-500 via-yellow-500 via-green-500 via-cyan-500 via-blue-500 to-purple-500 animate-pulse"></div>
+            <div className="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-purple-500 via-blue-500 via-cyan-500 via-green-500 via-yellow-500 to-red-500 animate-pulse"></div>
+          </div>
+          
+          {/* Floating Color Orbs */}
+          <div className="absolute inset-0">
+            <div className="absolute top-1/4 left-1/4 w-32 h-32 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-full blur-xl animate-pulse"></div>
+            <div className="absolute top-3/4 right-1/4 w-40 h-40 bg-gradient-to-br from-red-500/20 to-orange-500/20 rounded-full blur-xl animate-pulse delay-1000"></div>
+            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-24 h-24 bg-gradient-to-br from-green-500/20 to-cyan-500/20 rounded-full blur-xl animate-pulse delay-500"></div>
           </div>
         </div>
 
         {/* Hero Content */}
-        <div className="relative z-10 text-center max-w-4xl mx-auto px-4">
-          <h1 className="text-5xl md:text-7xl font-bold mb-6 tracking-tight">
-            <span className="block">COLOR GRADING</span>
-            <span className="block text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400">
+        <div className="relative z-10 text-center max-w-5xl mx-auto px-4">
+          {/* Dolby Vision Badge */}
+          <div className="inline-flex items-center px-4 py-2 bg-white/10 backdrop-blur-sm rounded-full border border-white/20 mb-8 animate-fade-in">
+            <Award size={16} className="text-yellow-400 mr-2" />
+            <span className="text-sm font-medium text-white">Dolby Vision Certified</span>
+          </div>
+          
+          <h1 className="text-6xl md:text-8xl font-bold mb-8 tracking-tight animate-fade-in-up">
+            <span className="block bg-gradient-to-r from-white via-gray-100 to-white bg-clip-text text-transparent">
+              COLOR GRADING
+            </span>
+            <span className="block text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 mt-2">
               FOR PREMIUM CONTENT
             </span>
           </h1>
-          
-          <p className="text-xl md:text-2xl text-gray-300 mb-8 font-light">
-            Cinema | Commercial | Music | Shows | Corporate
-          </p>
 
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+          <div className="flex flex-col sm:flex-row gap-6 justify-center items-center animate-fade-in-up delay-300">
             <Button
               size="lg"
-              className="bg-white text-black hover:bg-gray-200 px-8 py-3 text-lg font-semibold"
+              className="bg-gradient-to-r from-blue-500 to-purple-500 text-white hover:from-blue-600 hover:to-purple-600 px-10 py-4 text-lg font-semibold rounded-full shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
               asChild
             >
               <Link to="/portfolio">
@@ -68,13 +72,20 @@ const Home = () => {
             <Button
               variant="outline"
               size="lg"
-              className="border-white text-white hover:bg-white hover:text-black px-8 py-3 text-lg"
+              className="border-2 border-white/50 text-white hover:bg-white hover:text-black px-10 py-4 text-lg rounded-full backdrop-blur-sm transition-all duration-300 transform hover:scale-105"
               onClick={() => setIsVideoPlaying(true)}
             >
               <Play className="mr-2" size={20} />
               Assistir Reel
             </Button>
           </div>
+        </div>
+
+        {/* Categories near scroll indicator */}
+        <div className="absolute bottom-20 left-1/2 transform -translate-x-1/2 text-center animate-fade-in delay-500">
+          <p className="text-lg text-gray-300 font-light mb-4">
+            Cinema • Commercial • Music • Shows • Corporate
+          </p>
         </div>
 
         {/* Scroll Indicator */}
