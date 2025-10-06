@@ -1,4 +1,4 @@
-import { Palette, Eye, Settings, Headphones, Clock, Shield } from 'lucide-react'
+import { Palette, Eye, Settings, Headphones, Clock, Shield, Award } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 const Services = () => {
@@ -14,6 +14,19 @@ const Services = () => {
         'Finalização em diferentes formatos'
       ],
       price: 'A partir de R$ 500/dia'
+    },
+    {
+      icon: Award,
+      title: 'Dolby Vision HDR',
+      description: 'Workflow completo em Dolby Vision para conteúdo premium HDR',
+      features: [
+        'Certificação Dolby Vision',
+        'Processamento 10-bit em tempo real',
+        'Monitores de referência HDR',
+        'Sessões remotas via DaVinci Resolve'
+      ],
+      price: 'A partir de R$ 800/dia',
+      premium: true
     },
     {
       icon: Eye,
@@ -117,10 +130,26 @@ const Services = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {services.map((service, index) => (
-              <div key={index} className="bg-gray-900 rounded-lg p-8 space-y-6">
+              <div key={index} className={`rounded-lg p-8 space-y-6 ${
+                service.premium 
+                  ? 'bg-gradient-to-br from-gray-900 to-black border border-yellow-500/30' 
+                  : 'bg-gray-900'
+              }`}>
+                {service.premium && (
+                  <div className="flex items-center space-x-2 mb-4">
+                    <div className="w-6 h-6 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-full flex items-center justify-center">
+                      <span className="text-xs font-bold text-black">★</span>
+                    </div>
+                    <span className="text-yellow-500 font-semibold text-sm">PREMIUM</span>
+                  </div>
+                )}
                 <div className="flex items-center space-x-4">
-                  <div className="w-12 h-12 bg-white/10 rounded-lg flex items-center justify-center">
-                    <service.icon size={24} className="text-white" />
+                  <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
+                    service.premium 
+                      ? 'bg-gradient-to-r from-yellow-500 to-orange-500' 
+                      : 'bg-white/10'
+                  }`}>
+                    <service.icon size={24} className={service.premium ? "text-black" : "text-white"} />
                   </div>
                   <div>
                     <h3 className="text-2xl font-bold">{service.title}</h3>
@@ -131,7 +160,9 @@ const Services = () => {
                 <ul className="space-y-2">
                   {service.features.map((feature, featureIndex) => (
                     <li key={featureIndex} className="flex items-center space-x-2">
-                      <div className="w-2 h-2 bg-white rounded-full"></div>
+                      <div className={`w-2 h-2 rounded-full ${
+                        service.premium ? 'bg-yellow-500' : 'bg-white'
+                      }`}></div>
                       <span className="text-gray-300">{feature}</span>
                     </li>
                   ))}
@@ -141,7 +172,10 @@ const Services = () => {
                   <span className="text-lg font-semibold text-white">{service.price}</span>
                   <Button 
                     variant="outline" 
-                    className="border-white text-white hover:bg-white hover:text-black"
+                    className={service.premium 
+                      ? "bg-gradient-to-r from-yellow-500 to-orange-500 text-black border-none hover:opacity-90"
+                      : "border-white text-white hover:bg-white hover:text-black"
+                    }
                   >
                     Solicitar Orçamento
                   </Button>
