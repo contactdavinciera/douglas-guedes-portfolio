@@ -171,7 +171,7 @@ const About = () => {
                   de color grading exigentes.
                 </p>
                 <ul className="text-sm text-gray-500 space-y-1">
-                  <li>Calibração de fábrica</li>
+                  <li>Item de Calibração</li>
                   <li>Suporte Rec.709, DCI-P3, Adobe RGB</li>
                   <li>Profundidade de cor 10-bit</li>
                   <li>Tecnologia HDR</li>
