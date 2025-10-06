@@ -23,9 +23,14 @@ const Header = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
-          <Link to="/" className="flex flex-col text-white font-bold tracking-wider hover:opacity-80 transition-opacity duration-200">
-            <span className="text-xl">DOUGLAS GUEDES</span>
-            <span className="text-xs text-gray-300 font-normal tracking-widest">COLOR ARTIST</span>
+          <Link to="/" className="flex items-center space-x-3 text-white font-bold tracking-wider hover:opacity-80 transition-opacity duration-200">
+            <div className="flex flex-col">
+              <span className="text-xl">DOUGLAS GUEDES</span>
+              <span className="text-xs text-gray-300 font-normal tracking-widest">COLOR ARTIST</span>
+            </div>
+            <div className="flex items-center px-2 py-1 bg-yellow-500/20 rounded border border-yellow-500/30">
+              <span className="text-xs font-medium text-yellow-400">DOLBY VISION</span>
+            </div>
           </Link>
 
           {/* Desktop Navigation */}

@@ -24,8 +24,19 @@ const Home = () => {
     <div className="min-h-screen bg-black text-white">
       {/* Hero Section */}
       <section className="relative h-screen flex items-center justify-center overflow-hidden">
-        {/* Animated Background */}
-        <div className="absolute inset-0 bg-gradient-to-br from-black via-gray-900 to-black">
+        {/* Background Video/Images Slideshow */}
+        <div className="absolute inset-0">
+          {/* Video Background Placeholder - será substituído por vídeo real */}
+          <div className="absolute inset-0 bg-gradient-to-br from-black via-gray-900 to-black">
+            {/* Slideshow de imagens de trabalhos */}
+            <div className="absolute inset-0 opacity-30">
+              <div className="w-full h-full bg-gradient-to-br from-blue-900/50 via-purple-900/50 to-red-900/50 animate-color-shift"></div>
+            </div>
+            
+            {/* Overlay escuro para legibilidade */}
+            <div className="absolute inset-0 bg-black/60"></div>
+          </div>
+          
           {/* Color Grading Bars Animation */}
           <div className="absolute inset-0 opacity-20">
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-500 via-yellow-500 via-green-500 via-cyan-500 via-blue-500 to-purple-500 animate-pulse"></div>

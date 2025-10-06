@@ -1,379 +1,346 @@
-import React, { useState, useRef } from 'react';
-import { Upload, Play, Pause, Download, Eye, Calculator, Clock, Zap } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Upload, Play, Download, Settings, Monitor, Palette, Zap, Award } from 'lucide-react';
+import { Button } from '../components/ui/button';
 
 const ColorStudio = () => {
   const [uploadedFile, setUploadedFile] = useState(null);
+  const [fileFormat, setFileFormat] = useState(null);
+  const [colorSpace, setColorSpace] = useState(null);
   const [selectedLUT, setSelectedLUT] = useState(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [budget, setBudget] = useState(null);
-  const [projectSpecs, setProjectSpecs] = useState({
-    duration: '',
-    resolution: '1080p',
-    delivery: '48h',
-    complexity: 'standard'
-  });
-  const videoRef = useRef(null);
+  const [isHDRCapable, setIsHDRCapable] = useState(false);
+  const [previewMode, setPreviewMode] = useState('auto'); // 'auto', 'advanced'
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [estimatedPrice, setEstimatedPrice] = useState(0);
+  const fileInputRef = useRef(null);
 
-  const lutStyles = [
-    {
-      id: 'cinematic',
-      name: 'Cinematográfico',
-      description: 'Look profissional para cinema e documentários',
-      preview: '/api/placeholder/300/200',
-      basePrice: 150
-    },
-    {
-      id: 'commercial',
-      name: 'Comercial',
-      description: 'Vibrante e impactante para publicidade',
-      preview: '/api/placeholder/300/200',
-      basePrice: 120
-    },
-    {
-      id: 'instagram',
-      name: 'Instagram',
-      description: 'Otimizado para redes sociais',
-      preview: '/api/placeholder/300/200',
-      basePrice: 80
-    },
-    {
-      id: 'vintage',
-      name: 'Vintage',
-      description: 'Estética retrô e nostálgica',
-      preview: '/api/placeholder/300/200',
-      basePrice: 100
-    },
-    {
-      id: 'dramatic',
-      name: 'Dramático',
-      description: 'Alto contraste para impacto emocional',
-      preview: '/api/placeholder/300/200',
-      basePrice: 140
-    },
-    {
-      id: 'natural',
-      name: 'Natural',
-      description: 'Correção sutil e realista',
-      preview: '/api/placeholder/300/200',
-      basePrice: 90
-    }
-  ];
+  // Detectar capacidade HDR do dispositivo
+  useEffect(() => {
+    const checkHDRSupport = () => {
+      // Verifica suporte a P3 color gamut (indicativo de HDR)
+      const supportsP3 = window.matchMedia('(color-gamut: p3)').matches;
+      const supportsHDR = window.matchMedia('(dynamic-range: high)').matches;
+      setIsHDRCapable(supportsP3 || supportsHDR);
+    };
+    
+    checkHDRSupport();
+  }, []);
+
+  // Biblioteca de LUTs categorizados
+  const lutLibrary = {
+    cinema: [
+      { id: 'blockbuster', name: 'Blockbuster', description: 'Estilo Hollywood épico' },
+      { id: 'indie', name: 'Indie Film', description: 'Look cinematográfico independente' },
+      { id: 'noir', name: 'Film Noir', description: 'Alto contraste, sombras dramáticas' },
+      { id: 'thriller', name: 'Thriller', description: 'Tons frios, atmosfera tensa' }
+    ],
+    commercial: [
+      { id: 'clean', name: 'Clean & Bright', description: 'Limpo e vibrante para comerciais' },
+      { id: 'corporate', name: 'Corporate', description: 'Profissional e confiável' },
+      { id: 'fashion', name: 'Fashion', description: 'Cores saturadas, pele perfeita' },
+      { id: 'food', name: 'Food & Beverage', description: 'Cores apetitosas e quentes' }
+    ],
+    social: [
+      { id: 'instagram-warm', name: 'Instagram Warm', description: 'Tons quentes para redes sociais' },
+      { id: 'instagram-cool', name: 'Instagram Cool', description: 'Tons frios modernos' },
+      { id: 'vintage', name: 'Vintage', description: 'Look retrô nostálgico' },
+      { id: 'moody', name: 'Moody', description: 'Atmosfera dramática e escura' }
+    ],
+    special: [
+      { id: 'teal-orange', name: 'Teal & Orange', description: 'Clássico contraste complementar' },
+      { id: 'bleach-bypass', name: 'Bleach Bypass', description: 'Alto contraste, cores dessaturadas' },
+      { id: 'desaturated', name: 'Desaturated', description: 'Cores suaves e naturais' },
+      { id: 'cyberpunk', name: 'Cyberpunk', description: 'Neons vibrantes, futuro distópico' }
+    ]
+  };
+
+  // Detectar formato do arquivo
+  const detectFileFormat = (file) => {
+    const extension = file.name.split('.').pop().toLowerCase();
+    const formats = {
+      'braw': { format: 'BRAW', colorSpace: 'Blackmagic Wide Gamut', needsTransform: true },
+      'r3d': { format: 'RED R3D', colorSpace: 'REDWideGamutRGB', needsTransform: true },
+      'ari': { format: 'ALEXA', colorSpace: 'LogC', needsTransform: true },
+      'mov': { format: 'QuickTime', colorSpace: 'Rec.709', needsTransform: false },
+      'mp4': { format: 'MP4', colorSpace: 'Rec.709', needsTransform: false },
+      'mxf': { format: 'Sony MXF', colorSpace: 'S-Gamut3', needsTransform: true },
+      'dng': { format: 'Cinema DNG', colorSpace: 'Linear', needsTransform: true }
+    };
+    
+    return formats[extension] || { format: 'Unknown', colorSpace: 'Unknown', needsTransform: false };
+  };
+
+  // Calcular preço baseado na complexidade
+  const calculatePrice = (format, duration = 60, resolution = '4K') => {
+    let basePrice = 150; // Preço base para 1 minuto em 4K
+    
+    // Multiplicadores por formato
+    const formatMultipliers = {
+      'BRAW': 1.3,
+      'RED R3D': 1.4,
+      'ALEXA': 1.2,
+      'Sony MXF': 1.2,
+      'Cinema DNG': 1.5,
+      'QuickTime': 1.0,
+      'MP4': 1.0
+    };
+    
+    // Multiplicadores por resolução
+    const resolutionMultipliers = {
+      '1080p': 0.7,
+      '4K': 1.0,
+      '6K': 1.3,
+      '8K': 1.6
+    };
+    
+    const formatMultiplier = formatMultipliers[format] || 1.0;
+    const resMultiplier = resolutionMultipliers[resolution] || 1.0;
+    const durationMultiplier = Math.max(duration / 60, 0.5); // Mínimo 30 segundos
+    
+    return Math.round(basePrice * formatMultiplier * resMultiplier * durationMultiplier);
+  };
 
   const handleFileUpload = (event) => {
     const file = event.target.files[0];
-    if (file && file.type.startsWith('video/')) {
+    if (file) {
       setUploadedFile(file);
-      const url = URL.createObjectURL(file);
-      if (videoRef.current) {
-        videoRef.current.src = url;
-      }
+      const detectedFormat = detectFileFormat(file);
+      setFileFormat(detectedFormat.format);
+      setColorSpace(detectedFormat.colorSpace);
+      
+      // Simular análise de duração (em produção seria extraído dos metadados)
+      const estimatedDuration = 60; // segundos
+      const price = calculatePrice(detectedFormat.format, estimatedDuration);
+      setEstimatedPrice(price);
+      
+      setIsProcessing(true);
+      // Simular processamento
+      setTimeout(() => setIsProcessing(false), 2000);
     }
   };
 
-  const calculateBudget = () => {
-    if (!selectedLUT || !projectSpecs.duration) return;
-
-    const baseLUT = lutStyles.find(lut => lut.id === selectedLUT);
-    let price = baseLUT.basePrice;
-
-    // Multiplicadores baseados nas especificações
-    const durationMinutes = parseFloat(projectSpecs.duration);
-    if (durationMinutes > 5) price *= 1.5;
-    if (durationMinutes > 15) price *= 2;
-
-    if (projectSpecs.resolution === '4K') price *= 1.8;
-    if (projectSpecs.resolution === '8K') price *= 2.5;
-
-    if (projectSpecs.delivery === '24h') price *= 1.5;
-    if (projectSpecs.delivery === '12h') price *= 2;
-
-    if (projectSpecs.complexity === 'complex') price *= 1.4;
-    if (projectSpecs.complexity === 'premium') price *= 2;
-
-    setBudget(Math.round(price));
+  const applyLUT = (lut) => {
+    setSelectedLUT(lut);
+    // Aqui seria aplicado o LUT via WebGL shaders
+    console.log(`Aplicando LUT: ${lut.name} em ${colorSpace} -> Rec.709`);
   };
-
-  const togglePlay = () => {
-    if (videoRef.current) {
-      if (isPlaying) {
-        videoRef.current.pause();
-      } else {
-        videoRef.current.play();
-      }
-      setIsPlaying(!isPlaying);
-    }
-  };
-
-  const selectLUT = (lutId) => {
-    setSelectedLUT(lutId);
-    // Aqui seria aplicado o filtro CSS ou WebGL para simular o LUT
-    if (videoRef.current) {
-      const lutClass = `lut-${lutId}`;
-      videoRef.current.className = lutClass;
-    }
-  };
-
-  React.useEffect(() => {
-    calculateBudget();
-  }, [selectedLUT, projectSpecs]);
 
   return (
     <div className="min-h-screen bg-black text-white pt-16">
-      {/* Hero Section */}
-      <section className="py-20 bg-gradient-to-b from-gray-900 to-black">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h1 className="text-5xl font-bold mb-6">Color Studio Online</h1>
-          <p className="text-xl text-gray-300 mb-8 max-w-3xl mx-auto">
-            Experimente diferentes looks de color grading no seu vídeo, 
-            receba orçamento instantâneo e contrate o serviço em poucos cliques.
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        {/* Header */}
+        <div className="text-center mb-12">
+          <h1 className="text-4xl md:text-6xl font-bold mb-4">
+            <span className="bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+              Color Studio Pro
+            </span>
+          </h1>
+          <p className="text-xl text-gray-300 mb-6">
+            Sistema profissional de color grading com detecção automática de formatos
           </p>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
-            <div className="flex items-center space-x-3">
-              <Upload className="text-blue-400" size={24} />
-              <span>Upload Instantâneo</span>
-            </div>
-            <div className="flex items-center space-x-3">
-              <Eye className="text-green-400" size={24} />
-              <span>Preview em Tempo Real</span>
-            </div>
-            <div className="flex items-center space-x-3">
-              <Calculator className="text-yellow-400" size={24} />
-              <span>Orçamento Automático</span>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Upload Section */}
-      <section className="py-16 bg-gray-900">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl font-bold text-center mb-12">1. Faça Upload do Seu Vídeo</h2>
           
-          {!uploadedFile ? (
-            <div className="border-2 border-dashed border-gray-600 rounded-lg p-12 text-center">
-              <Upload size={48} className="mx-auto mb-4 text-gray-400" />
-              <h3 className="text-xl font-semibold mb-2">Arraste seu vídeo aqui</h3>
-              <p className="text-gray-400 mb-6">Ou clique para selecionar (MP4, MOV, AVI - máx. 500MB)</p>
-              <label className="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg cursor-pointer inline-block transition-colors">
-                Selecionar Arquivo
-                <input
-                  type="file"
-                  accept="video/*"
-                  onChange={handleFileUpload}
-                  className="hidden"
-                />
-              </label>
+          {/* HDR Badge */}
+          <div className="flex justify-center items-center space-x-4 mb-8">
+            <div className={`flex items-center px-3 py-1 rounded-full border ${
+              isHDRCapable 
+                ? 'bg-green-500/20 border-green-500/30 text-green-400' 
+                : 'bg-gray-500/20 border-gray-500/30 text-gray-400'
+            }`}>
+              <Monitor size={16} className="mr-2" />
+              <span className="text-sm font-medium">
+                {isHDRCapable ? 'HDR Disponível' : 'SDR Display'}
+              </span>
             </div>
-          ) : (
-            <div className="bg-black rounded-lg p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-xl font-semibold">Seu Vídeo</h3>
-                <button
-                  onClick={togglePlay}
-                  className="bg-blue-600 hover:bg-blue-700 p-2 rounded-full transition-colors"
-                >
-                  {isPlaying ? <Pause size={20} /> : <Play size={20} />}
-                </button>
-              </div>
-              <div className="relative aspect-video bg-gray-800 rounded-lg overflow-hidden">
-                <video
-                  ref={videoRef}
-                  className="w-full h-full object-cover"
-                  onPlay={() => setIsPlaying(true)}
-                  onPause={() => setIsPlaying(false)}
-                  controls
-                />
-                {selectedLUT && (
-                  <div className="absolute top-4 right-4 bg-black/70 px-3 py-1 rounded-lg text-sm">
-                    {lutStyles.find(lut => lut.id === selectedLUT)?.name}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* LUT Selection */}
-      {uploadedFile && (
-        <section className="py-16 bg-black">
-          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-            <h2 className="text-3xl font-bold text-center mb-12">2. Escolha o Estilo de Color Grading</h2>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {lutStyles.map((lut) => (
-                <div
-                  key={lut.id}
-                  onClick={() => selectLUT(lut.id)}
-                  className={`cursor-pointer rounded-lg overflow-hidden transition-all duration-300 ${
-                    selectedLUT === lut.id
-                      ? 'ring-2 ring-blue-500 transform scale-105'
-                      : 'hover:transform hover:scale-102'
-                  }`}
-                >
-                  <div className="aspect-video bg-gray-800 relative">
-                    <div className="absolute inset-0 flex items-center justify-center text-gray-400">
-                      Preview {lut.name}
-                    </div>
-                  </div>
-                  <div className="bg-gray-900 p-4">
-                    <h3 className="font-semibold mb-2">{lut.name}</h3>
-                    <p className="text-sm text-gray-400 mb-3">{lut.description}</p>
-                    <div className="flex justify-between items-center">
-                      <span className="text-blue-400 font-semibold">A partir de R$ {lut.basePrice}</span>
-                      {selectedLUT === lut.id && (
-                        <span className="bg-blue-600 text-white px-2 py-1 rounded text-xs">
-                          Selecionado
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
+            <div className="flex items-center px-3 py-1 bg-yellow-500/20 rounded-full border border-yellow-500/30">
+              <Award size={16} className="text-yellow-400 mr-2" />
+              <span className="text-sm font-medium text-yellow-400">Dolby Vision Certified</span>
             </div>
           </div>
-        </section>
-      )}
+        </div>
 
-      {/* Project Specifications */}
-      {selectedLUT && (
-        <section className="py-16 bg-gray-900">
-          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-            <h2 className="text-3xl font-bold text-center mb-12">3. Especificações do Projeto</h2>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="space-y-6">
-                <div>
-                  <label className="block text-sm font-medium mb-2">Duração do Vídeo (minutos)</label>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+          {/* Upload Section */}
+          <div className="space-y-6">
+            <div className="bg-gray-900/50 backdrop-blur-sm rounded-xl p-8 border border-gray-700">
+              <h2 className="text-2xl font-bold mb-6 flex items-center">
+                <Upload className="mr-3" size={24} />
+                Upload & Análise
+              </h2>
+              
+              {!uploadedFile ? (
+                <div 
+                  className="border-2 border-dashed border-gray-600 rounded-lg p-12 text-center cursor-pointer hover:border-blue-500 transition-colors"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <Upload size={48} className="mx-auto mb-4 text-gray-400" />
+                  <p className="text-lg mb-2">Clique para fazer upload do seu vídeo</p>
+                  <p className="text-sm text-gray-400">
+                    Suporta: BRAW, R3D, ALEXA, Sony MXF, Cinema DNG, MOV, MP4
+                  </p>
                   <input
-                    type="number"
-                    value={projectSpecs.duration}
-                    onChange={(e) => setProjectSpecs({...projectSpecs, duration: e.target.value})}
-                    className="w-full bg-black border border-gray-600 rounded-lg px-4 py-2 focus:border-blue-500 focus:outline-none"
-                    placeholder="Ex: 2.5"
+                    ref={fileInputRef}
+                    type="file"
+                    accept="video/*"
+                    onChange={handleFileUpload}
+                    className="hidden"
                   />
                 </div>
-                
-                <div>
-                  <label className="block text-sm font-medium mb-2">Resolução</label>
-                  <select
-                    value={projectSpecs.resolution}
-                    onChange={(e) => setProjectSpecs({...projectSpecs, resolution: e.target.value})}
-                    className="w-full bg-black border border-gray-600 rounded-lg px-4 py-2 focus:border-blue-500 focus:outline-none"
-                  >
-                    <option value="1080p">Full HD (1080p)</option>
-                    <option value="4K">4K Ultra HD</option>
-                    <option value="8K">8K</option>
-                  </select>
+              ) : (
+                <div className="space-y-4">
+                  <div className="bg-gray-800 rounded-lg p-4">
+                    <h3 className="font-semibold mb-2">Arquivo Detectado:</h3>
+                    <p className="text-sm text-gray-300">{uploadedFile.name}</p>
+                  </div>
+                  
+                  {isProcessing ? (
+                    <div className="flex items-center justify-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                      <span className="ml-3">Analisando formato e metadados...</span>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="bg-gray-800 rounded-lg p-4">
+                        <h4 className="font-semibold text-sm mb-1">Formato</h4>
+                        <p className="text-blue-400">{fileFormat}</p>
+                      </div>
+                      <div className="bg-gray-800 rounded-lg p-4">
+                        <h4 className="font-semibold text-sm mb-1">Color Space</h4>
+                        <p className="text-purple-400">{colorSpace}</p>
+                      </div>
+                      <div className="bg-gray-800 rounded-lg p-4">
+                        <h4 className="font-semibold text-sm mb-1">Saída</h4>
+                        <p className="text-green-400">{isHDRCapable ? 'HDR10/P3' : 'Rec.709'}</p>
+                      </div>
+                      <div className="bg-gray-800 rounded-lg p-4">
+                        <h4 className="font-semibold text-sm mb-1">Preço Estimado</h4>
+                        <p className="text-yellow-400 font-bold">R$ {estimatedPrice}</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
+              )}
+            </div>
+
+            {/* Mode Selection */}
+            <div className="bg-gray-900/50 backdrop-blur-sm rounded-xl p-8 border border-gray-700">
+              <h2 className="text-2xl font-bold mb-6 flex items-center">
+                <Settings className="mr-3" size={24} />
+                Modo de Processamento
+              </h2>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <button
+                  onClick={() => setPreviewMode('auto')}
+                  className={`p-4 rounded-lg border-2 transition-all ${
+                    previewMode === 'auto'
+                      ? 'border-blue-500 bg-blue-500/20'
+                      : 'border-gray-600 hover:border-gray-500'
+                  }`}
+                >
+                  <Zap className="mb-2" size={24} />
+                  <h3 className="font-semibold mb-1">Automático</h3>
+                  <p className="text-sm text-gray-400">
+                    Detecção e conversão automática de color space
+                  </p>
+                </button>
+                
+                <button
+                  onClick={() => setPreviewMode('advanced')}
+                  className={`p-4 rounded-lg border-2 transition-all ${
+                    previewMode === 'advanced'
+                      ? 'border-purple-500 bg-purple-500/20'
+                      : 'border-gray-600 hover:border-gray-500'
+                  }`}
+                >
+                  <Settings className="mb-2" size={24} />
+                  <h3 className="font-semibold mb-1">Avançado</h3>
+                  <p className="text-sm text-gray-400">
+                    Controle manual de transformações
+                  </p>
+                </button>
               </div>
+            </div>
+          </div>
+
+          {/* LUT Library */}
+          <div className="space-y-6">
+            <div className="bg-gray-900/50 backdrop-blur-sm rounded-xl p-8 border border-gray-700">
+              <h2 className="text-2xl font-bold mb-6 flex items-center">
+                <Palette className="mr-3" size={24} />
+                Biblioteca de LUTs
+              </h2>
               
               <div className="space-y-6">
-                <div>
-                  <label className="block text-sm font-medium mb-2">Prazo de Entrega</label>
-                  <select
-                    value={projectSpecs.delivery}
-                    onChange={(e) => setProjectSpecs({...projectSpecs, delivery: e.target.value})}
-                    className="w-full bg-black border border-gray-600 rounded-lg px-4 py-2 focus:border-blue-500 focus:outline-none"
-                  >
-                    <option value="7d">7 dias</option>
-                    <option value="48h">48 horas (+50%)</option>
-                    <option value="24h">24 horas (+100%)</option>
-                    <option value="12h">12 horas (+150%)</option>
-                  </select>
-                </div>
+                {Object.entries(lutLibrary).map(([category, luts]) => (
+                  <div key={category}>
+                    <h3 className="text-lg font-semibold mb-3 capitalize">
+                      {category === 'social' ? 'Redes Sociais' : 
+                       category === 'special' ? 'Especiais' : 
+                       category === 'commercial' ? 'Comercial' : 'Cinema'}
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {luts.map((lut) => (
+                        <button
+                          key={lut.id}
+                          onClick={() => applyLUT(lut)}
+                          className={`p-3 rounded-lg border text-left transition-all hover:scale-105 ${
+                            selectedLUT?.id === lut.id
+                              ? 'border-blue-500 bg-blue-500/20'
+                              : 'border-gray-600 hover:border-gray-500'
+                          }`}
+                        >
+                          <h4 className="font-semibold text-sm mb-1">{lut.name}</h4>
+                          <p className="text-xs text-gray-400">{lut.description}</p>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Preview & Actions */}
+            {uploadedFile && (
+              <div className="bg-gray-900/50 backdrop-blur-sm rounded-xl p-8 border border-gray-700">
+                <h2 className="text-2xl font-bold mb-6 flex items-center">
+                  <Play className="mr-3" size={24} />
+                  Preview & Ações
+                </h2>
                 
-                <div>
-                  <label className="block text-sm font-medium mb-2">Complexidade</label>
-                  <select
-                    value={projectSpecs.complexity}
-                    onChange={(e) => setProjectSpecs({...projectSpecs, complexity: e.target.value})}
-                    className="w-full bg-black border border-gray-600 rounded-lg px-4 py-2 focus:border-blue-500 focus:outline-none"
-                  >
-                    <option value="standard">Padrão</option>
-                    <option value="complex">Complexo (+40%)</option>
-                    <option value="premium">Premium (+100%)</option>
-                  </select>
+                <div className="space-y-4">
+                  <div className="bg-gray-800 rounded-lg p-4 text-center">
+                    <p className="text-gray-400 mb-2">Preview do vídeo aparecerá aqui</p>
+                    <div className="w-full h-48 bg-gray-700 rounded flex items-center justify-center">
+                      <Play size={48} className="text-gray-500" />
+                    </div>
+                  </div>
+                  
+                  {selectedLUT && (
+                    <div className="bg-blue-900/30 border border-blue-500/30 rounded-lg p-4">
+                      <p className="text-sm text-blue-300">
+                        <strong>LUT Aplicado:</strong> {selectedLUT.name}
+                      </p>
+                      <p className="text-xs text-blue-400 mt-1">
+                        {colorSpace} → {isHDRCapable ? 'HDR10/P3' : 'Rec.709'} → {selectedLUT.name}
+                      </p>
+                    </div>
+                  )}
+                  
+                  <div className="flex space-x-4">
+                    <Button className="flex-1 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600">
+                      <Download className="mr-2" size={16} />
+                      Solicitar Orçamento
+                    </Button>
+                    <Button variant="outline" className="border-gray-600 hover:bg-gray-800">
+                      <Settings className="mr-2" size={16} />
+                      Configurar
+                    </Button>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
           </div>
-        </section>
-      )}
-
-      {/* Budget & Checkout */}
-      {budget && (
-        <section className="py-16 bg-black">
-          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            <h2 className="text-3xl font-bold mb-8">4. Orçamento e Contratação</h2>
-            
-            <div className="bg-gradient-to-r from-blue-900 to-purple-900 rounded-lg p-8 mb-8">
-              <div className="text-4xl font-bold mb-4">R$ {budget}</div>
-              <p className="text-xl text-gray-300 mb-6">
-                Color grading profissional com o look "{lutStyles.find(lut => lut.id === selectedLUT)?.name}"
-              </p>
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 text-sm">
-                <div className="flex items-center justify-center space-x-2">
-                  <Clock size={16} />
-                  <span>Entrega: {projectSpecs.delivery === '7d' ? '7 dias' : projectSpecs.delivery}</span>
-                </div>
-                <div className="flex items-center justify-center space-x-2">
-                  <Zap size={16} />
-                  <span>Resolução: {projectSpecs.resolution}</span>
-                </div>
-                <div className="flex items-center justify-center space-x-2">
-                  <Eye size={16} />
-                  <span>Duração: {projectSpecs.duration} min</span>
-                </div>
-              </div>
-              
-              <div className="space-y-4">
-                <button className="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-lg font-semibold transition-colors">
-                  Contratar Agora
-                </button>
-                <div className="text-sm text-gray-400">
-                  Pagamento seguro • Revisões incluídas • Garantia de qualidade
-                </div>
-              </div>
-            </div>
-            
-            <div className="text-left bg-gray-900 rounded-lg p-6">
-              <h3 className="font-semibold mb-4">O que está incluído:</h3>
-              <ul className="space-y-2 text-gray-300">
-                <li>✓ Color grading profissional com o look selecionado</li>
-                <li>✓ Até 2 rodadas de revisão</li>
-                <li>✓ Entrega em alta qualidade</li>
-                <li>✓ Suporte técnico durante o projeto</li>
-                <li>✓ Arquivos de projeto (DaVinci Resolve)</li>
-              </ul>
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* CTA Section */}
-      <section className="py-20 bg-gradient-to-r from-gray-900 to-black">
-        <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
-          <h2 className="text-4xl font-bold mb-6">
-            Revolucione Seus Vídeos com Color Grading Profissional
-          </h2>
-          <p className="text-xl text-gray-300 mb-8">
-            Experimente agora e veja a diferença que um color grading de qualidade pode fazer
-          </p>
-          {!uploadedFile && (
-            <label className="bg-blue-600 hover:bg-blue-700 px-8 py-3 text-lg font-semibold rounded-lg cursor-pointer inline-block transition-colors">
-              Começar Agora
-              <input
-                type="file"
-                accept="video/*"
-                onChange={handleFileUpload}
-                className="hidden"
-              />
-            </label>
-          )}
         </div>
-      </section>
+      </div>
     </div>
   );
 };
