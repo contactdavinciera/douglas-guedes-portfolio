@@ -8,6 +8,8 @@ import Services from './pages/Services'
 import Contact from './pages/Contact'
 import './App.css'
 
+console.log('App.jsx loaded - Version 2.2'); // Para verificar o deploy
+
 function App() {
   return (
     <Router>
@@ -29,3 +31,4 @@ function App() {
 }
 
 export default App
+
