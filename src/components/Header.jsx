@@ -12,6 +12,7 @@ const Header = () => {
     { name: 'Portfólio', href: '/portfolio' },
     { name: 'Sobre', href: '/about' },
     { name: 'Serviços', href: '/services' },
+    { name: 'Color Studio', href: '/color-studio' },
     { name: 'Contato', href: '/contact' }
   ]
 

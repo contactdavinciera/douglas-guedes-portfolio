@@ -6,6 +6,8 @@ import Portfolio from './pages/Portfolio'
 import About from './pages/About'
 import Services from './pages/Services'
 import Contact from './pages/Contact'
+import ColorStudio from './pages/ColorStudio'
+import ClientDashboard from './pages/ClientDashboard'
 import './App.css'
 
 console.log('App.jsx loaded - Version 2.2'); // Para verificar o deploy
@@ -22,6 +24,8 @@ function App() {
             <Route path="/about" element={<About />} />
             <Route path="/services" element={<Services />} />
             <Route path="/contact" element={<Contact />} />
+            <Route path="/color-studio" element={<ColorStudio />} />
+            <Route path="/dashboard" element={<ClientDashboard />} />
           </Routes>
         </main>
         <Footer />

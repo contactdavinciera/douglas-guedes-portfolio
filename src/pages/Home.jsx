@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Play, ArrowRight, Award, Users, Clock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -117,6 +117,57 @@ const Home = () => {
                 {category}
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Color Studio Section */}
+      <section className="py-20 bg-gradient-to-r from-blue-900 to-purple-900">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            <div>
+              <h2 className="text-4xl font-bold mb-6">
+                Experimente Nosso Color Studio Online
+              </h2>
+              <p className="text-xl text-gray-300 mb-8">
+                Faça upload do seu vídeo, escolha diferentes looks de color grading, 
+                veja o resultado em tempo real e receba orçamento instantâneo.
+              </p>
+              <div className="space-y-4 mb-8">
+                <div className="flex items-center space-x-3">
+                  <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
+                  <span>Preview em tempo real com diferentes LUTs</span>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
+                  <span>Orçamento automático baseado nas especificações</span>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
+                  <span>Sistema de comentários e revisões integrado</span>
+                </div>
+              </div>
+              <Button
+                size="lg"
+                className="bg-white text-black hover:bg-gray-200 px-8 py-3 text-lg font-semibold"
+                asChild
+              >
+                <Link to="/color-studio">
+                  Experimentar Agora
+                  <ArrowRight className="ml-2" size={20} />
+                </Link>
+              </Button>
+            </div>
+            <div className="relative">
+              <div className="aspect-video bg-black rounded-lg overflow-hidden border border-white/20">
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="text-center space-y-4">
+                    <Play size={48} className="text-white mx-auto" />
+                    <p className="text-gray-400">Color Studio Demo</p>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
