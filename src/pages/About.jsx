@@ -180,6 +180,41 @@ const About = () => {
         </div>
       </section>
 
+      {/* Testimonials Section */}
+      <section className="py-20 bg-gray-900">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <h2 className="text-4xl font-bold text-center mb-16">O que dizem os clientes</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="bg-black rounded-lg p-8 space-y-4">
+              <p className="text-lg italic text-gray-300">
+                "O Douglas transformou completamente a estética do nosso filme. A sensibilidade 
+                dele para a cor é algo que raramente se vê. O resultado final superou todas as expectativas."
+              </p>
+              <div className="flex items-center space-x-4">
+                <div className="w-12 h-12 bg-white/10 rounded-full"></div>
+                <div>
+                  <p className="font-semibold">Diretor de Cinema</p>
+                  <p className="text-sm text-gray-400">Produtora XYZ</p>
+                </div>
+              </div>
+            </div>
+            <div className="bg-black rounded-lg p-8 space-y-4">
+              <p className="text-lg italic text-gray-300">
+                "Trabalhar com o Douglas é garantia de qualidade e profissionalismo. Ele captou 
+                exatamente a visão que tínhamos para a campanha e entregou um trabalho impecável."
+              </p>
+              <div className="flex items-center space-x-4">
+                <div className="w-12 h-12 bg-white/10 rounded-full"></div>
+                <div>
+                  <p className="font-semibold">Gerente de Marketing</p>
+                  <p className="text-sm text-gray-400">Agência ABC</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* CTA Section */}
       <section className="py-20 bg-gradient-to-r from-gray-900 to-black">
         <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Play, ArrowLeft, ArrowRight } from 'lucide-react'
+import { Play, ArrowLeft, ArrowRight, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 const Portfolio = () => {
@@ -191,7 +191,7 @@ const Portfolio = () => {
           {/* Projects Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {filteredProjects.map((project) => (
-              <div key={project.id} className="space-y-4">
+              <div key={project.id} className="space-y-4 cursor-pointer" onClick={() => setSelectedProject(project)}>
                 <BeforeAfterSlider 
                   beforeImage={project.beforeImage}
                   afterImage={project.afterImage}
@@ -212,6 +212,45 @@ const Portfolio = () => {
         </div>
       </section>
 
+      {/* Project Detail Modal */}
+      {selectedProject && (
+        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+          <div className="bg-gray-900 rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto p-8 relative">
+            <button 
+              className="absolute top-4 right-4 text-gray-400 hover:text-white"
+              onClick={() => setSelectedProject(null)}
+            >
+              <X size={24} />
+            </button>
+            <h2 className="text-3xl font-bold mb-4">{selectedProject.title}</h2>
+            <span className="text-sm text-gray-400 bg-gray-800 px-2 py-1 rounded mb-4 inline-block">
+              {selectedProject.type}
+            </span>
+            <div className="aspect-video bg-black rounded-lg mb-6">
+              {/* Placeholder for project video/images */}
+              <div className="w-full h-full flex items-center justify-center text-gray-500">
+                Vídeo/Imagens do Projeto
+              </div>
+            </div>
+            <p className="text-gray-300 mb-6">{selectedProject.description}</p>
+            
+            <h3 className="text-xl font-semibold mb-2">Desafio e Solução</h3>
+            <p className="text-gray-400 mb-6">
+              Aqui você pode descrever o desafio específico do projeto, a visão do diretor 
+              e como o color grading de Douglas Guedes contribuiu para alcançar o resultado desejado.
+              Detalhes sobre a paleta de cores, atmosfera criada e técnicas utilizadas.
+            </p>
+
+            <h3 className="text-xl font-semibold mb-2">Depoimento do Cliente</h3>
+            <blockquote className="text-lg italic text-gray-300 border-l-4 border-white/20 pl-4">
+              "O trabalho do Douglas foi fundamental para a narrativa visual do nosso projeto. 
+              Ele elevou a qualidade a um nível que não imaginávamos ser possível."
+              <p className="text-sm text-gray-400 mt-2">- Nome do Cliente, Cargo</p>
+            </blockquote>
+          </div>
+        </div>
+      )}
+
       {/* CTA Section */}
       <section className="py-20 bg-gradient-to-r from-gray-900 to-black">
         <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
@@ -223,7 +262,7 @@ const Portfolio = () => {
           </p>
           <Button
             size="lg"
-            className="bg-white text-black hover:bg-gray-200 px-8 py-3 text-lg font-semibold"
+            className="bg-white text-black hover:bg-white/90 px-8 py-3 text-lg font-semibold"
           >
             Solicitar Orçamento
           </Button>
@@ -234,3 +273,4 @@ const Portfolio = () => {
 }
 
 export default Portfolio
+
