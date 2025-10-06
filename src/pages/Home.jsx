@@ -68,28 +68,7 @@ const Home = () => {
             <p className="text-3xl md:text-5xl font-serif italic text-white mb-8 leading-tight">
               "Onde a cor encontra a emoção: Elevando sua narrativa através da cor."
             </p>
-            <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">
-              <Button
-                size="lg"
-                className="bg-gradient-to-r from-blue-500 to-purple-500 text-white hover:from-blue-600 hover:to-purple-600 px-10 py-4 text-lg font-semibold rounded-full shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
-                asChild
-              >
-                <Link to="/portfolio">
-                  Ver Portfólio
-                  <ArrowRight className="ml-2" size={20} />
-                </Link>
-              </Button>
-              
-              <Button
-                variant="outline"
-                size="lg"
-                className="border-2 border-white/50 text-white hover:bg-white hover:text-black px-10 py-4 text-lg rounded-full backdrop-blur-sm transition-all duration-300 transform hover:scale-105"
-                onClick={() => setIsVideoPlaying(true)}
-              >
-                <Play className="mr-2" size={20} />
-                Assistir Reel
-              </Button>
-            </div>
+
           </div>
         </div>
 
