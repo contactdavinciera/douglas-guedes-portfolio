@@ -227,39 +227,39 @@ const Services = () => {
             <div className="space-y-6">
               <h3 className="text-2xl font-semibold">Software</h3>
               <ul className="space-y-2 text-gray-300">
-                <li>• DaVinci Resolve Studio</li>
-                <li>• Baselight (acesso via facility)</li>
-                <li>• Adobe Premiere Pro</li>
-                <li>• Final Cut Pro</li>
+                <li>DaVinci Resolve Studio</li>
+                <li>Baselight (acesso via facility)</li>
+                <li>Adobe Premiere Pro</li>
+                <li>Final Cut Pro</li>
               </ul>
             </div>
             <div className="space-y-6">
               <h3 className="text-2xl font-semibold">Formatos Suportados</h3>
               <ul className="space-y-2 text-gray-300">
-                <li>• ProRes (todos os codecs)</li>
-                <li>• DNxHD/DNxHR</li>
-                <li>• RED R3D</li>
-                <li>• ARRI RAW</li>
-                <li>• Sony RAW</li>
-                <li>• Canon RAW</li>
+                <li>ProRes (todos os codecs)</li>
+                <li>DNxHD/DNxHR</li>
+                <li>RED R3D</li>
+                <li>ARRI RAW</li>
+                <li>Sony RAW</li>
+                <li>Canon RAW</li>
               </ul>
             </div>
             <div className="space-y-6">
               <h3 className="text-2xl font-semibold">Espaços de Cor</h3>
               <ul className="space-y-2 text-gray-300">
-                <li>• Rec.709 (HD/UHD)</li>
-                <li>• DCI-P3 (Cinema)</li>
-                <li>• Rec.2020 (HDR)</li>
-                <li>• ACES Workflow</li>
+                <li>Rec.709 (HD/UHD)</li>
+                <li>DCI-P3 (Cinema)</li>
+                <li>Rec.2020 (HDR)</li>
+                <li>ACES Workflow</li>
               </ul>
             </div>
             <div className="space-y-6">
               <h3 className="text-2xl font-semibold">Entrega</h3>
               <ul className="space-y-2 text-gray-300">
-                <li>• ProRes 422 HQ/4444</li>
-                <li>• H.264/H.265</li>
-                <li>• DCP (Cinema)</li>
-                <li>• Broadcast specs</li>
+                <li>ProRes 422 HQ/4444</li>
+                <li>H.264/H.265</li>
+                <li>DCP (Cinema)</li>
+                <li>Broadcast specs</li>
               </ul>
             </div>
           </div>

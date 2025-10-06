@@ -151,11 +151,11 @@ const About = () => {
                   para grading HDR preciso.
                 </p>
                 <ul className="text-sm text-gray-500 space-y-1">
-                  <li><span>Resolução 4K (4096 x 2160)</span></li>
-                  <li><span>Painel OLED TRIMASTER EL™</span></li>
-                  <li><span>Suporte Dolby Vision, HLG, HDR10</span></li>
-                  <li><span>Luminância de pico: 1000 nits</span></li>
-                  <li><span>Cobertura de cor: DCI-P3, Rec.2020</span></li>
+                  <li>Resolução 4K (4096 x 2160)</li>
+                  <li>Painel OLED TRIMASTER EL</li>
+                  <li>Suporte Dolby Vision, HLG, HDR10</li>
+                  <li>Luminância de pico: 1000 nits</li>
+                  <li>Cobertura de cor: DCI-P3, Rec.2020</li>
                 </ul>
               </div>
             </div>
@@ -171,11 +171,11 @@ const About = () => {
                   de color grading exigentes.
                 </p>
                 <ul className="text-sm text-gray-500 space-y-1">
-                  <li><span>Calibração de fábrica</span></li>
-                  <li><span>Suporte Rec.709, DCI-P3, Adobe RGB</span></li>
-                  <li><span>Profundidade de cor 10-bit</span></li>
-                  <li><span>Tecnologia HDR</span></li>
-                  <li><span>Uniformidade de cor superior</span></li>
+                  <li>Calibração de fábrica</li>
+                  <li>Suporte Rec.709, DCI-P3, Adobe RGB</li>
+                  <li>Profundidade de cor 10-bit</li>
+                  <li>Tecnologia HDR</li>
+                  <li>Uniformidade de cor superior</li>
                 </ul>
               </div>
             </div>
