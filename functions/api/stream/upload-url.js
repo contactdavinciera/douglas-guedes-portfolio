@@ -23,13 +23,13 @@ export async function onRequest(context) {
   const reqOrigin = request.headers.get("Origin") || "";
   let maxDurationSeconds = 3600;
   let expiry = new Date(Date.now() + 5*60*60*1000).toISOString(); // Ajustado para 5 horas
-  let allowedOrigins = [reqOrigin || "douglas-guedes-portfolio.pages.dev"]; // Ajustado para domínio sem protocolo
+  let allowedOrigins = [reqOrigin.replace(/^https?:\/\//, "") || "douglas-guedes-portfolio.pages.dev"]; // Ajustado para domínio sem protocolo
   try {
     const body = await request.json().catch(() => ({}));
     if (body.maxDurationSeconds) maxDurationSeconds = body.maxDurationSeconds;
     if (body.expiry) expiry = body.expiry;
     if (Array.isArray(body.allowedOrigins) && body.allowedOrigins.length) {
-      allowedOrigins = body.allowedOrigins;
+      allowedOrigins = body.allowedOrigins.map(origin => origin.replace(/^https?:\/\//, ""));
     }
   } catch { /* ignore */ }
 
