@@ -3,15 +3,13 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import path from 'path'
 
-// https://vite.dev/config/
+// https://vitejs.dev/config/
 export default defineConfig({
-  base: './',
   server: {
     watch: {
       usePolling: true
     }
   },
-
   plugins: [react(),tailwindcss()],
   build: {
     rollupOptions: {
