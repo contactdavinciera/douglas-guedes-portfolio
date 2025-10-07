@@ -1,0 +1,20 @@
+name: Deploy to Cloudflare Pages (prod, no tests)
+
+on:
+  push:
+    branches: [ "master", "main" ]  # dispara em master OU main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Cloudflare Pages Production Deploy
+        env:
+          CF_PAGES_DEPLOY_HOOK: ${{ secrets.CF_PAGES_DEPLOY_HOOK }}
+        run: |
+          if [ -z "$CF_PAGES_DEPLOY_HOOK" ]; then
+            echo "Secret CF_PAGES_DEPLOY_HOOK não foi configurado."
+            exit 1
+          fi
+          curl -sS -X POST "$CF_PAGES_DEPLOY_HOOK"
+          echo "Deploy disparado no Cloudflare Pages."
