@@ -2,6 +2,7 @@
 class StreamApiService {
   constructor() {
     this.baseUrl = process.env.REACT_APP_API_BASE_URL || '';
+    this.frontendOrigin = "douglas-guedes-portfolio.pages.dev"; // Adicionar o domínio do frontend sem protocolo para uso em allowedOrigins
   }
 
   // Obter URL de upload direto
@@ -31,7 +32,8 @@ class StreamApiService {
         body: JSON.stringify({
           uploadLength: file.size,
           uploadMetadata: metadataString,
-          maxDurationSeconds
+          maxDurationSeconds,
+          allowedOrigins: [this.frontendOrigin] // Passar o origin do frontend para o backend
         })
       });
 
