@@ -203,21 +203,13 @@ const ColorStudio = () => {
         {/* Main Content */}
         <div className="flex flex-col items-center space-y-8">
           {/* Video Player Central */}
-          <div className="w-full flex justify-center" ref={containerRef}>
-            <div className={getVideoPlayerStyle()}>
+          <div className="w-full flex justify-center mb-8" ref={containerRef}>
+            <div className="w-full bg-gray-900 rounded-xl border border-gray-700 overflow-hidden max-w-4xl aspect-video">
               {streamVideo ? (
-                <div className="relative">
-                  <CloudflareStreamPlayer
-                    videoId={streamVideo.videoId}
-                    customerCode={streamVideo.customerCode}
-                    aspectRatio={videoAspectRatio}
-                    onPlayerReady={handlePlayerReady}
-                    onVideoEnd={handleVideoEnd}
-                    onTimeUpdate={handleTimeUpdate}
-                    primaryColor="#3b82f6"
-                    letterboxColor="transparent"
-                    className="w-full"
-                  />
+                <div className="relative w-full h-full">
+                  <div className="w-full h-full bg-gray-800 flex items-center justify-center">
+                    <p className="text-white">Player do Cloudflare Stream aqui</p>
+                  </div>
 
                   {/* LUT Preview Overlay */}
                   {selectedLUT && (
@@ -247,15 +239,17 @@ const ColorStudio = () => {
 
           {/* Upload Section */}
           {!streamVideo && (
-            <div className="w-full max-w-4xl">
-              <StreamUploader
-                onUploadComplete={handleUploadComplete}
-                onUploadProgress={handleUploadProgress}
-                onUploadError={handleUploadError}
-                maxDurationSeconds={3600}
-                acceptedFormats={["video/*", ".braw", ".r3d", ".ari", ".mxf", ".dng"]}
-                className="w-full"
-              />
+            <div className="w-full max-w-4xl mb-8">
+              <div className="bg-gray-800/30 border-2 border-dashed border-gray-600 rounded-lg p-8 text-center">
+                <div className="flex flex-col items-center">
+                  <Upload size={48} className="text-gray-400 mb-4" />
+                  <h3 className="text-xl font-semibold mb-2">Upload de Vídeo</h3>
+                  <p className="text-gray-400 mb-4">Clique para selecionar ou arraste arquivos aqui</p>
+                  <Button className="bg-blue-600 hover:bg-blue-700">
+                    Selecionar Arquivo
+                  </Button>
+                </div>
+              </div>
             </div>
           )}
 
