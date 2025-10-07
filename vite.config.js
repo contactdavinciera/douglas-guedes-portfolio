@@ -10,7 +10,7 @@ export default defineConfig({
       usePolling: true
     }
   },
-  base: '/',
+
   plugins: [react(),tailwindcss()],
   resolve: {
     alias: {
