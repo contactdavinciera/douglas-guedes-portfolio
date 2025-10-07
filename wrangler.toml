@@ -1,0 +1,10 @@
+
+name = "douglas-guedes-portfolio"
+main = "./functions/_worker.js"
+compatibility_date = "2025-10-07"
+
+[vars]
+CLOUDFLARE_ACCOUNT_ID = "d458200430e0b01d18a501ea59310826"
+CLOUDFLARE_API_TOKEN = "Jli_tsVcr8IYzxT55QxJiZisHpdmng2Er0ucdb5G"
+CLOUDFLARE_EMAIL = "douglasninjaguedes@gmail.com"
+
