@@ -1,6 +1,6 @@
 // API service for Color Studio Pro
 const API_BASE_URL = process.env.NODE_ENV === 'production' 
-  ? '/api/color-studio' 
+  ? 'https://color-studio-backend.onrender.com/api/color-studio' 
   : 'http://localhost:5001/api/color-studio';
 
 class ColorStudioAPI {
