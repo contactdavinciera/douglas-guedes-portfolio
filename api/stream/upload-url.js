@@ -1,5 +1,5 @@
 // API endpoint para gerar URLs de upload direto para Cloudflare Stream
-export default async function handler(req, res) {
+export default async function handler(req, env, ctx) {
   // Configurar CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -23,9 +23,9 @@ export default async function handler(req, res) {
     }
 
     // Configurações do Cloudflare Stream
-    const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
-    const apiToken = process.env.CLOUDFLARE_API_TOKEN;
-    const email = process.env.CLOUDFLARE_EMAIL;
+    const accountId = env.CLOUDFLARE_ACCOUNT_ID;
+    const apiToken = env.CLOUDFLARE_API_TOKEN;
+    const email = env.CLOUDFLARE_EMAIL;
 
     if (!accountId || !apiToken || !email) {
       console.error('Credenciais do Cloudflare Stream não configuradas');
