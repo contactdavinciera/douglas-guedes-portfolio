@@ -21,14 +21,11 @@ export const onRequestPost = async ({ request, env }) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-
     // Configurações do Cloudflare Stream - Lendo do KV Namespace
     const accountId = await env.ENV_VARS.get('CLOUDFLARE_ACCOUNT_ID');
-    const apiToken = await env.ENV_VARS.get('CLOUDFLARE_API_TOKEN');
-    const email = await env.ENV_VARS.get('CLOUDFLARE_EMAIL');
-
+    const apiToken = await env.ENV_VARS.get("CLOUDFLARE_API_TOKEN");
+    const email = await env.ENV_VARS.get("CLOUDFLARE_EMAIL");
     if (!accountId || !apiToken || !email) {
-      console.error('Credenciais do Cloudflare Stream não configuradas no KV Namespace. accountId:', accountId, 'apiToken:', apiToken, 'email:', email);
       return new Response(JSON.stringify({ 
         error: 'Configuração do servidor incompleta: Variáveis de ambiente ausentes no KV Namespace',
         details: {
