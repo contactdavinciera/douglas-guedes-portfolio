@@ -14,6 +14,7 @@ export async function onRequest({ env, request }) {
   const expiry = new Date(now + fiveHoursFiftyMinutesMs).toISOString();
 
   const payload = {
+    maxDurationSeconds: 18000, // Definido para 5 horas, conforme sugerido
     expiry: expiry,
     creator: "douglas-portfolio"
   };
