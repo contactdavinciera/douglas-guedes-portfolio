@@ -118,7 +118,8 @@ class StreamApiService {
     console.log(\'uploadWithTus: Iniciando upload TUS com tus-js-client para:\', uploadUrl, \'com arquivo:\', file.name);
     return new Promise((resolve, reject) => {
       const upload = new tus.Upload(file, {
-        endpoint: uploadUrl,
+        uploadUrl: uploadUrl, // Usar uploadUrl para retomar um recurso já criado
+        removeFingerprintOnSuccess: true, // Desabilitar fingerprinting para depuração
         uploadSize: file.size,
         metadata: {
           filename: file.name,
