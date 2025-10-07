@@ -5,9 +5,7 @@ main_service = "douglas-guedes-portfolio"
 binding = "R2_BUCKET"
 bucket_name = "douglas-guedes-portfolio-r2"
 
-[[kv_namespaces]]
-binding = "ENV_VARS"
-id = "DOUGLAS_GUEDES_ENV"
+
 
 [functions]
 directory = "functions"

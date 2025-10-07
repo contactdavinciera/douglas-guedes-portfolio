@@ -21,10 +21,10 @@ export const onRequestPost = async ({ request, env }) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-    // Configurações do Cloudflare Stream - Lendo do KV Namespace
-    const accountId = await env.ENV_VARS.get('CLOUDFLARE_ACCOUNT_ID');
-    const apiToken = await env.ENV_VARS.get("CLOUDFLARE_API_TOKEN");
-    const email = await env.ENV_VARS.get("CLOUDFLARE_EMAIL");
+    // Configurações do Cloudflare Stream - Lendo das variáveis de ambiente do projeto Pages
+    const accountId = env.CLOUDFLARE_ACCOUNT_ID;
+    const apiToken = env.CLOUDFLARE_API_TOKEN;
+    const email = env.CLOUDFLARE_EMAIL;
     if (!accountId || !apiToken || !email) {
       return new Response(JSON.stringify({ 
         error: 'Configuração do servidor incompleta: Variáveis de ambiente ausentes no KV Namespace',
@@ -53,8 +53,7 @@ export const onRequestPost = async ({ request, env }) => {
         {
           method: 'POST',
           headers: {
-            'X-Auth-Email': email,
-            'X-Auth-Key': apiToken,
+            'Authorization': `Bearer ${apiToken}`, // Usando Token de API
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
@@ -92,8 +91,7 @@ export const onRequestPost = async ({ request, env }) => {
         {
           method: 'POST',
           headers: {
-            'X-Auth-Email': email,
-            'X-Auth-Key': apiToken,
+            'Authorization': `Bearer ${apiToken}`, // Usando Token de API
             'Tus-Resumable': '1.0.0',
             'Upload-Length': uploadLength.toString(),
             'Upload-Metadata': uploadMetadata || `maxDurationSeconds ${btoa(maxDurationSeconds.toString())}`
