@@ -8,6 +8,7 @@ import StreamUploader from '../components/StreamUploader';
 import colorStudioApi from '../services/colorStudioApi';
 
 const ColorStudio = () => {
+  console.log('ColorStudio: Componente carregado');
   const [streamVideo, setStreamVideo] = useState(null); // { videoId, customerCode, metadata }
   const [selectedLUT, setSelectedLUT] = useState(null);
   const [isHDRCapable, setIsHDRCapable] = useState(false);
@@ -23,10 +24,12 @@ const ColorStudio = () => {
 
   // Detectar capacidade HDR do dispositivo
   useEffect(() => {
+    console.log('ColorStudio: useEffect para detecção de HDR acionado.');
     const checkHDRSupport = () => {
       const supportsP3 = window.matchMedia('(color-gamut: p3)').matches;
       const supportsHDR = window.matchMedia('(dynamic-range: high)').matches;
       setIsHDRCapable(supportsP3 || supportsHDR);
+      console.log('ColorStudio: Capacidade HDR detectada:', supportsP3 || supportsHDR);
     };
     
     checkHDRSupport();
@@ -36,6 +39,7 @@ const ColorStudio = () => {
 
   // Manipular upload completo para Cloudflare Stream
   const handleUploadComplete = (result) => {
+    console.log('ColorStudio: handleUploadComplete acionado com resultado:', result);
     setStreamVideo(result);
     
     // Detectar aspect ratio baseado nos metadados
@@ -48,22 +52,25 @@ const ColorStudio = () => {
         else if (aspectRatio > 1.2) setVideoAspectRatio('4:3');
         else if (aspectRatio < 0.8) setVideoAspectRatio('9:16');
         else setVideoAspectRatio('1:1');
+        console.log('ColorStudio: Aspect ratio do vídeo detectado:', videoAspectRatio);
       }
       
       // Calcular preço baseado no formato
       const price = calculatePrice(result.metadata.format, result.metadata.duration);
       setEstimatedPrice(price);
+      console.log('ColorStudio: Preço estimado calculado:', price);
     }
   };
 
   // Manipular progresso do upload
   const handleUploadProgress = (progress, uploadedBytes, totalBytes) => {
+    // console.log('ColorStudio: Progresso de upload:', progress);
     setUploadProgress(progress);
   };
 
   // Manipular erro no upload
   const handleUploadError = (error) => {
-    console.error('Erro no upload:', error);
+    console.error('ColorStudio: Erro no upload:', error);
   };
 
   // Calcular preço baseado na complexidade
@@ -96,20 +103,24 @@ const ColorStudio = () => {
 
   // Manipular quando o player estiver pronto
   const handlePlayerReady = (streamPlayer) => {
+    console.log('ColorStudio: Player do Stream pronto.');
     setPlayer(streamPlayer);
   };
 
   // Manipular fim do vídeo
   const handleVideoEnd = () => {
+    console.log('ColorStudio: Vídeo terminou.');
     // Lógica para quando o vídeo terminar
   };
 
   // Manipular atualização de tempo
   const handleTimeUpdate = (currentTime, duration) => {
+    // console.log('ColorStudio: Tempo do vídeo atualizado:', currentTime);
     // Lógica para atualização de tempo se necessário
   };
 
   const applyLUT = (lut) => {
+    console.log('ColorStudio: Aplicando LUT:', lut.name);
     setSelectedLUT(lut);
     console.log(`Aplicando LUT: ${lut.name} em ${streamVideo?.metadata?.colorSpace || 'Unknown'} -> Rec.709`);
     
@@ -150,15 +161,23 @@ const ColorStudio = () => {
   };
 
   const getComplexityColor = (format) => {
-    const detectedFormat = detectFileFormat({ name: `test.${format.toLowerCase()}` });
-    switch (detectedFormat.complexity) {
-      case 'high': return 'text-red-400';
-      case 'medium': return 'text-yellow-400';
-      case 'low': return 'text-green-400';
-      default: return 'text-gray-400';
+    switch (format.toLowerCase()) {
+      case \'braw\':
+      case \'red r3d\':
+      case \'cinema dng\':
+        return \'text-red-400\';
+      case \'alexa\':
+      case \'sony mxf\':
+        return \'text-yellow-400\';
+      case \'quicktime\':
+      case \'mp4\':
+        return \'text-green-400\';
+      default:
+        return \'text-gray-400\';
     }
   };
 
+  console.log('ColorStudio: Renderizando. streamVideo:', streamVideo ? 'presente' : 'ausente', 'isHDRCapable:', isHDRCapable);
   return (
     <div className="min-h-screen bg-black text-white pt-16">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -347,3 +366,4 @@ const ColorStudio = () => {
 };
 
 export default ColorStudio;
+
