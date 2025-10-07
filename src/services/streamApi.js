@@ -1,3 +1,5 @@
+import * as tus from "tus-js-client";
+
 // Serviço para interagir com as APIs do Cloudflare Stream
 class StreamApiService {
   constructor() {
@@ -111,57 +113,37 @@ class StreamApiService {
     }
   }
 
-  // Upload usando TUS (Tus Resumable Upload)
+  // Upload usando TUS (Tus Resumable Upload) com tus-js-client
   async uploadWithTus(file, uploadUrl, onProgress) {
-    console.log('uploadWithTus: Iniciando upload TUS para:', uploadUrl, 'com arquivo:', file.name);
+    console.log(\'uploadWithTus: Iniciando upload TUS com tus-js-client para:\', uploadUrl, \'com arquivo:\', file.name);
     return new Promise((resolve, reject) => {
-      const chunkSize = 5 * 1024 * 1024; // 5MB chunks
-      let uploadedBytes = 0;
+      const upload = new tus.Upload(file, {
+        endpoint: uploadUrl,
+        uploadSize: file.size,
+        metadata: {
+          filename: file.name,
+          filetype: file.type || \'application/octet-stream\',
+        },
+        chunkSize: 5 * 1024 * 1024, // 5 MB
+        retryDelays: [0, 1000, 3000, 5000],
 
-      const uploadChunk = async () => {
-        try {
-          const chunk = file.slice(uploadedBytes, uploadedBytes + chunkSize);
-          
-          // Fazer upload do chunk
-          const response = await fetch(uploadUrl, {
-            method: 'PATCH',
-            headers: {
-              'Content-Type': 'application/offset+octet-stream',
-              'Upload-Offset': uploadedBytes.toString(),
-              'Tus-Resumable': '1.0.0'
-            },
-            body: chunk
-          });
-
-          if (!response.ok) {
-            console.error('uploadWithTus: Erro na resposta do chunk:', response.status, response.statusText);
-            throw new Error(`Erro no upload: ${response.statusText}`);
-          }
-
-          uploadedBytes += chunk.size;
-          const progress = Math.round((uploadedBytes / file.size) * 100);
-          
-          onProgress?.(progress, uploadedBytes, file.size);
-
-          if (uploadedBytes < file.size) {
-            // Continuar upload
-            uploadChunk();
-          } else {
-            // Upload completo
-            console.log('uploadWithTus: Upload TUS concluído.');
-            resolve({
-              success: true,
-              uploadedBytes,
-              totalBytes: file.size
-            });
-          }
-        } catch (error) {
-          console.error('uploadWithTus: Erro durante o upload do chunk:', error);
+        onError: (error) => {
+          console.error(\'TUS error:\', error);
           reject(error);
-        }
-      };
+        },
 
-      uploadChunk();
+        onProgress: (bytesSent, bytesTotal) => {
+          const pct = Math.floor((bytesSent / bytesTotal) * 100);
+          if (onProgress) onProgress(pct, bytesSent, bytesTotal);
+        },
+
+        onSuccess: () => {
+          console.log(\'TUS upload concluído. URL:\', upload.url);
+          resolve({ tusUrl: upload.url });
+        },
+      });
+
+      upload.start();
     });
   }
 
