@@ -1,0 +1,2 @@
+Deploy trigger - $(date)
+Forçando novo deploy para ativar o novo token da API do Cloudflare Stream.
