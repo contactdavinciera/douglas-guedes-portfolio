@@ -1,4 +1,5 @@
 [pages]
+pages_build_output_dir = "dist"
 main_service = "douglas-guedes-portfolio"
 
 [[r2_buckets]]
@@ -37,5 +38,3 @@ directory = "functions"
 
 
 
-[pages.build_output]
-dir = "dist"
