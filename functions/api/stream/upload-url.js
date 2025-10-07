@@ -20,6 +20,7 @@ export async function onRequest(context) {
   }
 
   const now = Date.now();
+  console.log("Current time (now):", new Date(now).toISOString());
   const sixHoursMs = 6 * 60 * 60 * 1000; // 6 horas em milissegundos
   let requestedExpiry; // ISO do body (opcional)
 
