@@ -8,6 +8,7 @@ import StreamUploader from '../components/StreamUploader';
 import colorStudioApi from '../services/colorStudioApi';
 
 const ColorStudio = () => {
+  const [isFullscreen, setIsFullscreen] = useState(false);
   console.log('ColorStudio: Componente carregado');
   const [streamVideo, setStreamVideo] = useState(null); // { videoId, customerCode, metadata }
   const [selectedLUT, setSelectedLUT] = useState(null);
