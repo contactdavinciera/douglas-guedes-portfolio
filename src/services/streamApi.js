@@ -32,7 +32,7 @@ class StreamApiService {
         body: JSON.stringify({
           uploadLength: file.size,
           uploadMetadata: metadataString,
-          maxDurationSeconds,
+          maxDurationSeconds: Math.min(maxDurationSeconds, 18000), // garante limite de 5h,
           allowedOrigins: [this.frontendOrigin] // Passar o origin do frontend para o backend
         })
       });
