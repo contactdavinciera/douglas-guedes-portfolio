@@ -27,8 +27,9 @@ export default async function handler(req, res) {
     // Configurações do Cloudflare Stream
     const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
     const apiToken = process.env.CLOUDFLARE_API_TOKEN;
+    const email = process.env.CLOUDFLARE_EMAIL;
 
-    if (!accountId || !apiToken) {
+    if (!accountId || !apiToken || !email) {
       console.error('Credenciais do Cloudflare Stream não configuradas');
       return res.status(500).json({ error: 'Configuração do servidor incompleta' });
     }
@@ -50,7 +51,8 @@ export default async function handler(req, res) {
       {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${apiToken}`,
+          'X-Auth-Email': email,
+          'X-Auth-Key': apiToken,
           'Content-Type': 'application/json',
         }
       }
@@ -79,9 +81,17 @@ export default async function handler(req, res) {
         }
         return true;
       })
-      .map(video => ({
+      .map(video => {
+        // Detectar customer code automaticamente
+        let customerCode = 'demo';
+        if (video.playback?.hls) {
+          const match = video.playback.hls.match(/customer-([^.]+)/);
+          if (match) customerCode = match[1];
+        }
+
+        return {
         videoId: video.uid,
-        customerCode: process.env.CLOUDFLARE_CUSTOMER_CODE || 'demo',
+        customerCode,
         status: video.status?.state || 'unknown',
         ready: video.readyToStream || false,
         duration: video.duration || 0,
@@ -99,12 +109,13 @@ export default async function handler(req, res) {
         thumbnail: video.thumbnail || null,
         preview: video.preview || null,
         streamUrl: video.readyToStream 
-          ? `https://customer-${process.env.CLOUDFLARE_CUSTOMER_CODE || 'demo'}.cloudflarestream.com/${video.uid}`
+          ? `https://customer-${customerCode}.cloudflarestream.com/${video.uid}`
           : null,
         iframeUrl: video.readyToStream 
-          ? `https://customer-${process.env.CLOUDFLARE_CUSTOMER_CODE || 'demo'}.cloudflarestream.com/${video.uid}/iframe`
+          ? `https://customer-${customerCode}.cloudflarestream.com/${video.uid}/iframe`
           : null
-      }))
+        };
+      })
       .sort((a, b) => {
         // Aplicar ordenação
         let aValue = a[sortBy];

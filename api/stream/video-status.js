@@ -24,8 +24,9 @@ export default async function handler(req, res) {
     // Configurações do Cloudflare Stream
     const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
     const apiToken = process.env.CLOUDFLARE_API_TOKEN;
+    const email = process.env.CLOUDFLARE_EMAIL;
 
-    if (!accountId || !apiToken) {
+    if (!accountId || !apiToken || !email) {
       console.error('Credenciais do Cloudflare Stream não configuradas');
       return res.status(500).json({ error: 'Configuração do servidor incompleta' });
     }
@@ -36,7 +37,8 @@ export default async function handler(req, res) {
       {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${apiToken}`,
+          'X-Auth-Email': email,
+          'X-Auth-Key': apiToken,
           'Content-Type': 'application/json',
         }
       }
@@ -61,10 +63,17 @@ export default async function handler(req, res) {
     const data = await response.json();
     const video = data.result;
 
+    // Detectar customer code automaticamente das URLs de playback
+    let customerCode = 'demo';
+    if (video.playback?.hls) {
+      const match = video.playback.hls.match(/customer-([^.]+)/);
+      if (match) customerCode = match[1];
+    }
+
     // Processar informações do vídeo
     const videoInfo = {
       videoId: video.uid,
-      customerCode: process.env.CLOUDFLARE_CUSTOMER_CODE || 'demo',
+      customerCode,
       status: video.status?.state || 'unknown',
       ready: video.readyToStream || false,
       duration: video.duration || 0,
@@ -90,8 +99,8 @@ export default async function handler(req, res) {
 
     // Adicionar URLs de reprodução se o vídeo estiver pronto
     if (videoInfo.ready) {
-      videoInfo.streamUrl = `https://customer-${videoInfo.customerCode}.cloudflarestream.com/${videoInfo.videoId}`;
-      videoInfo.iframeUrl = `https://customer-${videoInfo.customerCode}.cloudflarestream.com/${videoInfo.videoId}/iframe`;
+        videoInfo.streamUrl = `https://customer-${customerCode}.cloudflarestream.com/${videoInfo.videoId}`;
+        videoInfo.iframeUrl = `https://customer-${customerCode}.cloudflarestream.com/${videoInfo.videoId}/iframe`;
     }
 
     res.status(200).json({

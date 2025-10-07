@@ -25,8 +25,9 @@ export default async function handler(req, res) {
     // Configurações do Cloudflare Stream
     const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
     const apiToken = process.env.CLOUDFLARE_API_TOKEN;
+    const email = process.env.CLOUDFLARE_EMAIL;
 
-    if (!accountId || !apiToken) {
+    if (!accountId || !apiToken || !email) {
       console.error('Credenciais do Cloudflare Stream não configuradas');
       return res.status(500).json({ error: 'Configuração do servidor incompleta' });
     }
@@ -45,7 +46,8 @@ export default async function handler(req, res) {
         {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${apiToken}`,
+            'X-Auth-Email': email,
+            'X-Auth-Key': apiToken,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
@@ -80,7 +82,8 @@ export default async function handler(req, res) {
         {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${apiToken}`,
+            'X-Auth-Email': email,
+            'X-Auth-Key': apiToken,
             'Tus-Resumable': '1.0.0',
             'Upload-Length': uploadLength.toString(),
             'Upload-Metadata': uploadMetadata || `maxDurationSeconds ${btoa(maxDurationSeconds.toString())}`
@@ -109,7 +112,7 @@ export default async function handler(req, res) {
       success: true,
       uploadUrl,
       videoId,
-      customerCode: process.env.CLOUDFLARE_CUSTOMER_CODE || 'demo',
+      customerCode: 'auto-detect', // Será detectado automaticamente no frontend
       uploadType: useBasicUpload ? 'basic' : 'tus',
       maxDurationSeconds,
       expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24 horas
