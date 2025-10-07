@@ -162,18 +162,18 @@ const ColorStudio = () => {
 
   const getComplexityColor = (format) => {
     switch (format.toLowerCase()) {
-      case \'braw\':
-      case \'red r3d\':
-      case \'cinema dng\':
-        return \'text-red-400\';
-      case \'alexa\':
-      case \'sony mxf\':
-        return \'text-yellow-400\';
-      case \'quicktime\':
-      case \'mp4\':
-        return \'text-green-400\';
+      case "braw":
+      case "red r3d":
+      case "cinema dng":
+        return "text-red-400";
+      case "alexa":
+      case "sony mxf":
+        return "text-yellow-400";
+      case "quicktime":
+      case "mp4":
+        return "text-green-400";
       default:
-        return \'text-gray-400\';
+        return "text-gray-400";
     }
   };
 
