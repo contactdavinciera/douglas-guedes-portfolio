@@ -8,13 +8,17 @@ export async function onRequest({ env, request }) {
 
   const url = `https://api.cloudflare.com/client/v4/accounts/${accountId}/stream/direct_upload`;
 
-  // payload mínimo (SEM expiry)
+  // Definir explicitamente o expiry para 5 horas e 50 minutos
+  const now = Date.now();
+  const fiveHoursFiftyMinutesMs = (5 * 60 * 60 * 1000) + (50 * 60 * 1000);
+  const expiry = new Date(now + fiveHoursFiftyMinutesMs).toISOString();
+
   const payload = {
-    // opcional:
-    // maxDurationSeconds: 3600,
-    // allowedOrigins: ["https://douglas-guedes-portfolio.pages.dev"],
+    expiry: expiry,
     creator: "douglas-portfolio"
   };
+
+  console.log("Payload being sent to Cloudflare Stream API:", JSON.stringify(payload, null, 2));
 
   const resp = await fetch(url, {
     method: "POST",
