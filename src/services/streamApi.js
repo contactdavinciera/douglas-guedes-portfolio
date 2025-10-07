@@ -47,11 +47,12 @@ class StreamApiService {
       const data = await response.json();
 
       if (!response.ok || !data.cf?.result) {
-        throw new Error("Erro ao verificar status do vídeo");
+        throw new Error("Erro ao listar vídeos");
       }
 
       return {
-        video: data.cf.result
+        videos: data.cf.result.videos || [],
+        total: data.cf.result.total || 0
       };
     } catch (error) {
       console.error('Erro ao obter URL de upload:', error);
@@ -77,11 +78,12 @@ class StreamApiService {
       const data = await response.json();
 
       if (!response.ok || !data.cf?.result) {
-        throw new Error("Erro ao verificar status do vídeo");
+        throw new Error("Erro ao listar vídeos");
       }
 
       return {
-        video: data.cf.result
+        videos: data.cf.result.videos || [],
+        total: data.cf.result.total || 0
       };
     } catch (error) {
       console.error('Erro ao verificar status do vídeo:', error);
@@ -125,11 +127,12 @@ class StreamApiService {
       const data = await response.json();
 
       if (!response.ok || !data.cf?.result) {
-        throw new Error("Erro ao verificar status do vídeo");
+        throw new Error("Erro ao listar vídeos");
       }
 
       return {
-        video: data.cf.result
+        videos: data.cf.result.videos || [],
+        total: data.cf.result.total || 0
       };
     } catch (error) {
       console.error('Erro ao listar vídeos:', error);
