@@ -18,7 +18,15 @@ function App() {
       <div className="min-h-screen bg-black text-white">
         <Header />
         <main>
-          <ColorStudio />
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/portfolio" element={<Portfolio />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/services" element={<Services />} />
+            <Route path="/contact" element={<Contact />} />
+            <Route path="/color-studio" element={<ColorStudio />} />
+            <Route path="/dashboard" element={<ClientDashboard />} />
+          </Routes>
         </main>
         <Footer />
       </div>
