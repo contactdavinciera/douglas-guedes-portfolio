@@ -35,3 +35,7 @@ directory = "functions"
 # directory = "functions"
 # ou configurar cada função individualmente se a estrutura for mais complexa.
 
+
+
+[pages.build_output]
+dir = "dist"
