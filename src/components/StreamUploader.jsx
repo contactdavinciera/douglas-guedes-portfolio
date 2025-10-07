@@ -3,14 +3,17 @@ import { Upload, X, CheckCircle, AlertCircle, FileVideo, Loader } from 'lucide-r
 import { Button } from './ui/button';
 import streamApi from '../services/streamApi';
 
-const StreamUploader = ({ 
-  onUploadComplete, 
-  onUploadProgress, 
+console.log('StreamUploader: Componente carregado');
+
+const StreamUploader = ({
+  onUploadComplete,
+  onUploadProgress,
   onUploadError,
   maxDurationSeconds = 3600,
   acceptedFormats = ['video/*', '.braw', '.r3d', '.ari', '.mxf', '.dng'],
   className = ""
 }) => {
+  console.log('StreamUploader: Renderizando com props:', { maxDurationSeconds, acceptedFormats });
   const [uploadState, setUploadState] = useState('idle'); // 'idle', 'uploading', 'success', 'error'
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadedFile, setUploadedFile] = useState(null);
@@ -21,6 +24,7 @@ const StreamUploader = ({
 
   // Detectar formato e metadados do arquivo
   const analyzeFile = useCallback((file) => {
+    console.log('StreamUploader: analyzeFile acionado para:', file.name);
     const extension = file.name.split('.').pop().toLowerCase();
     const formats = {
       'braw': { format: 'BRAW', colorSpace: 'Blackmagic Wide Gamut', isRaw: true },
@@ -34,19 +38,22 @@ const StreamUploader = ({
 
     const fileInfo = formats[extension] || { format: 'Unknown', colorSpace: 'Unknown', isRaw: false };
     
-    return {
+    const metadata = {
       name: file.name,
       size: file.size,
       type: file.type,
       lastModified: file.lastModified,
       ...fileInfo
     };
+    console.log('StreamUploader: Metadados do arquivo analisados:', metadata);
+    return metadata;
   }, []);
 
 
 
   // Processar upload de arquivo
   const handleFileUpload = async (file) => {
+    console.log('StreamUploader: handleFileUpload acionado para:', file.name);
     try {
       setUploadState('uploading');
       setUploadProgress(0);
@@ -55,27 +62,36 @@ const StreamUploader = ({
       
       const metadata = analyzeFile(file);
       setVideoMetadata(metadata);
+      console.log('StreamUploader: Estado de upload definido para "uploading".');
 
       // Obter URL de upload do backend
+      console.log('StreamUploader: Solicitando URL de upload...');
       const uploadResponse = await streamApi.getUploadUrl(file, maxDurationSeconds);
       const { uploadUrl, videoId, customerCode, uploadType } = uploadResponse;
+      console.log('StreamUploader: URL de upload recebida. videoId:', videoId, 'uploadType:', uploadType);
 
       // Fazer upload baseado no tipo
       if (uploadType === 'basic') {
+        console.log('StreamUploader: Iniciando upload básico...');
         await streamApi.uploadBasic(file, uploadUrl, (progress, uploaded, total) => {
           setUploadProgress(progress);
           onUploadProgress?.(progress, uploaded, total);
+          // console.log('StreamUploader: Progresso de upload básico:', progress);
         });
       } else {
+        console.log('StreamUploader: Iniciando upload com TUS...');
         await streamApi.uploadWithTus(file, uploadUrl, (progress, uploaded, total) => {
           setUploadProgress(progress);
           onUploadProgress?.(progress, uploaded, total);
+          // console.log('StreamUploader: Progresso de upload TUS:', progress);
         });
       }
 
       // Aguardar processamento do vídeo
       setUploadProgress(100);
+      console.log('StreamUploader: Upload concluído, aguardando processamento do vídeo...');
       const processedVideo = await streamApi.waitForProcessing(videoId);
+      console.log('StreamUploader: Vídeo processado. Dados:', processedVideo);
       
       const result = {
         videoId,
@@ -91,9 +107,10 @@ const StreamUploader = ({
       
       setUploadState('success');
       onUploadComplete?.(result);
+      console.log('StreamUploader: Upload bem-sucedido. Resultado:', result);
       
     } catch (error) {
-      console.error('Erro no upload:', error);
+      console.error('StreamUploader: Erro no upload:', error);
       setUploadError(error.message);
       setUploadState('error');
       onUploadError?.(error);
@@ -102,6 +119,7 @@ const StreamUploader = ({
 
   // Manipular seleção de arquivo
   const handleFileSelect = (event) => {
+    console.log('StreamUploader: handleFileSelect acionado.');
     const file = event.target.files[0];
     if (file) {
       handleFileUpload(file);
@@ -110,6 +128,7 @@ const StreamUploader = ({
 
   // Manipular drag and drop
   const handleDrop = (event) => {
+    console.log('StreamUploader: handleDrop acionado.');
     event.preventDefault();
     const file = event.dataTransfer.files[0];
     if (file) {
@@ -123,6 +142,7 @@ const StreamUploader = ({
 
   // Cancelar upload
   const cancelUpload = () => {
+    console.log('StreamUploader: cancelUpload acionado.');
     if (uploadRef.current) {
       uploadRef.current.abort();
     }
@@ -135,6 +155,7 @@ const StreamUploader = ({
 
   // Reset para novo upload
   const resetUpload = () => {
+    console.log('StreamUploader: resetUpload acionado.');
     setUploadState('idle');
     setUploadProgress(0);
     setUploadedFile(null);
@@ -151,6 +172,7 @@ const StreamUploader = ({
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
+  console.log('StreamUploader: Renderizando com uploadState:', uploadState);
   return (
     <div className={`w-full ${className}`}>
       {uploadState === 'idle' && (
@@ -290,3 +312,4 @@ const StreamUploader = ({
 };
 
 export default StreamUploader;
+
