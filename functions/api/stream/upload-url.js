@@ -22,24 +22,28 @@ export const onRequestPost = async ({ request, env }) => {
       });
     }
 
-    // Configurações do Cloudflare Stream
-    const accountId = env.CLOUDFLARE_ACCOUNT_ID;
-    const apiToken = env.CLOUDFLARE_API_TOKEN;
-    const email = env.CLOUDFLARE_EMAIL;
+    // Debug: Logar o objeto env e tentar acessar via process.env
+    console.log('Objeto env recebido:', env);
+    console.log('CLOUDFLARE_ACCOUNT_ID via env:', env.CLOUDFLARE_ACCOUNT_ID);
+    console.log('CLOUDFLARE_API_TOKEN via env:', env.CLOUDFLARE_API_TOKEN);
+    console.log('CLOUDFLARE_EMAIL via env:', env.CLOUDFLARE_EMAIL);
+    console.log('CLOUDFLARE_ACCOUNT_ID via process.env:', process.env.CLOUDFLARE_ACCOUNT_ID);
 
-    // Debug: Retornar as variáveis de ambiente para verificar se estão sendo carregadas
-    return new Response(JSON.stringify({
-      accountId: env.CLOUDFLARE_ACCOUNT_ID,
-      apiToken: env.CLOUDFLARE_API_TOKEN,
-      email: env.CLOUDFLARE_EMAIL,
-    }), {
-      status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    // Configurações do Cloudflare Stream
+    const accountId = env.CLOUDFLARE_ACCOUNT_ID || process.env.CLOUDFLARE_ACCOUNT_ID;
+    const apiToken = env.CLOUDFLARE_API_TOKEN || process.env.CLOUDFLARE_API_TOKEN;
+    const email = env.CLOUDFLARE_EMAIL || process.env.CLOUDFLARE_EMAIL;
 
     if (!accountId || !apiToken || !email) {
-      console.error('Credenciais do Cloudflare Stream não configuradas');
-      return new Response(JSON.stringify({ error: 'Configuração do servidor incompleta' }), {
+      console.error('Credenciais do Cloudflare Stream não configuradas. accountId:', accountId, 'apiToken:', apiToken, 'email:', email);
+      return new Response(JSON.stringify({ 
+        error: 'Configuração do servidor incompleta',
+        details: {
+          accountId: accountId ? 'Configurado' : 'Não configurado',
+          apiToken: apiToken ? 'Configurado' : 'Não configurado',
+          email: email ? 'Configurado' : 'Não configurado',
+        }
+      }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
