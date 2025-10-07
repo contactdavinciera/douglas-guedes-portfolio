@@ -16,6 +16,7 @@ function App() {
   return (
     <Router>
       <div className="min-h-screen bg-black text-white">
+        <div style={{ color: 'red', fontSize: '24px', textAlign: 'center', padding: '20px' }}>TESTE DE RENDERIZAÇÃO</div>
         <Header />
         <main>
           <Routes>
