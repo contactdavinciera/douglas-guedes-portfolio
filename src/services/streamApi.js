@@ -113,6 +113,7 @@ class StreamApiService {
 
   // Upload usando TUS (Tus Resumable Upload)
   async uploadWithTus(file, uploadUrl, onProgress) {
+    console.log('uploadWithTus: Iniciando upload TUS para:', uploadUrl, 'com arquivo:', file.name);
     return new Promise((resolve, reject) => {
       const chunkSize = 5 * 1024 * 1024; // 5MB chunks
       let uploadedBytes = 0;
@@ -133,6 +134,7 @@ class StreamApiService {
           });
 
           if (!response.ok) {
+            console.error('uploadWithTus: Erro na resposta do chunk:', response.status, response.statusText);
             throw new Error(`Erro no upload: ${response.statusText}`);
           }
 
@@ -146,6 +148,7 @@ class StreamApiService {
             uploadChunk();
           } else {
             // Upload completo
+            console.log('uploadWithTus: Upload TUS concluído.');
             resolve({
               success: true,
               uploadedBytes,
@@ -153,6 +156,7 @@ class StreamApiService {
             });
           }
         } catch (error) {
+          console.error('uploadWithTus: Erro durante o upload do chunk:', error);
           reject(error);
         }
       };
@@ -163,6 +167,7 @@ class StreamApiService {
 
   // Upload básico para arquivos pequenos
   async uploadBasic(file, uploadUrl, onProgress) {
+    console.log('uploadBasic: Iniciando upload básico para:', uploadUrl, 'com arquivo:', file.name);
     return new Promise((resolve, reject) => {
       const formData = new FormData();
       formData.append('file', file);
@@ -173,22 +178,26 @@ class StreamApiService {
         if (event.lengthComputable) {
           const progress = Math.round((event.loaded / event.total) * 100);
           onProgress?.(progress, event.loaded, event.total);
+          console.log('uploadBasic: Progresso:', progress);
         }
       });
 
       xhr.addEventListener('load', () => {
         if (xhr.status >= 200 && xhr.status < 300) {
+          console.log('uploadBasic: Upload básico concluído.');
           resolve({
             success: true,
             uploadedBytes: file.size,
             totalBytes: file.size
           });
         } else {
+          console.error('uploadBasic: Erro no upload:', xhr.status, xhr.statusText);
           reject(new Error(`Erro no upload: ${xhr.statusText}`));
         }
       });
 
       xhr.addEventListener('error', () => {
+        console.error('uploadBasic: Erro de rede durante o upload.');
         reject(new Error('Erro de rede durante o upload'));
       });
 
