@@ -19,28 +19,29 @@ export async function onRequest(context) {
     }, 500, request);
   }
 
-  // Configs padrão (pode vir do body)
-  const reqOrigin = request.headers.get("Origin") || "";
-  let maxDurationSeconds = 3600;
-  // Corrigido: expiry deve ser menor que 6 horas no futuro
-  let expiry = new Date(Date.now() + 5 * 60 * 60 * 1000).toISOString(); // 5 horas para ficar dentro do limite de 6h
-  console.log("Expiry value being sent:", expiry); // Log para depuração
-  let allowedOrigins = [reqOrigin.replace(/^https?:\/\//, "") || "douglas-guedes-portfolio.pages.dev"];
-  
+  const now = Date.now();
+  const sixHoursMs = 6 * 60 * 60 * 1000; // 6 horas em milissegundos
+  let requestedExpiry; // ISO do body (opcional)
+
   try {
     const body = await request.json().catch(() => ({}));
-    if (body.maxDurationSeconds) maxDurationSeconds = body.maxDurationSeconds;
-    if (body.expiry) expiry = body.expiry;
-    if (Array.isArray(body.allowedOrigins) && body.allowedOrigins.length) {
-      allowedOrigins = body.allowedOrigins.map(origin => origin.replace(/^https?:\/\//, ""));
-    }
+    requestedExpiry = body?.expiry; // ISO ex: "2025-07-14T15:30:00Z"
   } catch { /* ignore */ }
 
+  let expiry;
+  if (requestedExpiry) {
+    const reqMs = Date.parse(requestedExpiry);
+    if (!isNaN(reqMs)) {
+      const clamped = Math.min(reqMs, now + sixHoursMs - 60_000); // -1min de folga
+      expiry = new Date(clamped).toISOString();
+    }
+  }
+
   const url = `https://api.cloudflare.com/client/v4/accounts/${accountId}/stream/direct_upload`;
+  
+  // Payload simplificado
   const payload = {
-    maxDurationSeconds,
-    expiry,
-    allowedOrigins,
+    ...(expiry ? { expiry } : {}),
     creator: "douglas-portfolio"
   };
 
