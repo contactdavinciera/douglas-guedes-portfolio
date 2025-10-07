@@ -1,0 +1,17 @@
+name: CI/CD Test
+
+on:
+  workflow_dispatch:   # <-- garante o botão "Run workflow"
+  push:
+    branches: [ "master" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Say hello
+        run: echo "Pipeline rodando com sucesso 🚀"
