@@ -12,6 +12,11 @@ export default defineConfig({
   },
 
   plugins: [react(),tailwindcss()],
+  build: {
+    rollupOptions: {
+      external: ['tus-js-client'],
+    },
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
