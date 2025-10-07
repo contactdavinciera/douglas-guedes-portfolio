@@ -12,6 +12,9 @@ export const onRequestPost = async ({ request, env }) => {
   }
 
   try {
+    // Logar o objeto env completo para depuração
+    console.log('Objeto env completo recebido:', env);
+
     const { uploadLength, uploadMetadata, maxDurationSeconds = 3600 } = await request.json();
 
     // Validar parâmetros obrigatórios
@@ -22,17 +25,10 @@ export const onRequestPost = async ({ request, env }) => {
       });
     }
 
-    // Debug: Logar o objeto env e tentar acessar via process.env
-    console.log('Objeto env recebido:', env);
-    console.log('CLOUDFLARE_ACCOUNT_ID via env:', env.CLOUDFLARE_ACCOUNT_ID);
-    console.log('CLOUDFLARE_API_TOKEN via env:', env.CLOUDFLARE_API_TOKEN);
-    console.log('CLOUDFLARE_EMAIL via env:', env.CLOUDFLARE_EMAIL);
-    console.log('CLOUDFLARE_ACCOUNT_ID via process.env:', process.env.CLOUDFLARE_ACCOUNT_ID);
-
     // Configurações do Cloudflare Stream
-    const accountId = env.CLOUDFLARE_ACCOUNT_ID || process.env.CLOUDFLARE_ACCOUNT_ID;
-    const apiToken = env.CLOUDFLARE_API_TOKEN || process.env.CLOUDFLARE_API_TOKEN;
-    const email = env.CLOUDFLARE_EMAIL || process.env.CLOUDFLARE_EMAIL;
+    const accountId = env.CLOUDFLARE_ACCOUNT_ID;
+    const apiToken = env.CLOUDFLARE_API_TOKEN;
+    const email = env.CLOUDFLARE_EMAIL;
 
     if (!accountId || !apiToken || !email) {
       console.error('Credenciais do Cloudflare Stream não configuradas. accountId:', accountId, 'apiToken:', apiToken, 'email:', email);
