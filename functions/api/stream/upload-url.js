@@ -24,6 +24,7 @@ export async function onRequest(context) {
   let maxDurationSeconds = 3600;
   // Corrigido: expiry deve ser menor que 6 horas no futuro
   let expiry = new Date(Date.now() + 5 * 60 * 60 * 1000).toISOString(); // 5 horas para ficar dentro do limite de 6h
+  console.log("Expiry value being sent:", expiry); // Log para depuração
   let allowedOrigins = [reqOrigin.replace(/^https?:\/\//, "") || "douglas-guedes-portfolio.pages.dev"];
   
   try {
