@@ -67,7 +67,7 @@ const StreamUploader = ({
       // Obter URL de upload do backend
       console.log('StreamUploader: Solicitando URL de upload...');
       const uploadResponse = await streamApi.getUploadUrl(file, maxDurationSeconds);
-      const { uploadURL, uid } = uploadResponse.cf.result;
+      const { uploadURL, uid } = uploadResponse;
       const uploadUrl = uploadURL; // Renomear para uploadUrl para consistência
       const videoId = uid; // Renomear uid para videoId para consistência
       const customerCode = null; // Não retornado pelo direct_upload, definir como null ou remover se não for usado

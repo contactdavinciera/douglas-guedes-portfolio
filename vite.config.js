@@ -5,6 +5,11 @@ import path from 'path'
 
 // https://vite.dev/config/
 export default defineConfig({
+  server: {
+    watch: {
+      usePolling: true
+    }
+  },
   base: '/',
   plugins: [react(),tailwindcss()],
   resolve: {

@@ -44,7 +44,15 @@ class StreamApiService {
         throw new Error(errorData.error || 'Erro ao obter URL de upload');
       }
 
-      return await response.json();
+      const data = await response.json();
+
+      if (!response.ok || !data.cf?.result) {
+        throw new Error("Erro ao verificar status do vídeo");
+      }
+
+      return {
+        video: data.cf.result
+      };
     } catch (error) {
       console.error('Erro ao obter URL de upload:', error);
       throw error;
@@ -66,7 +74,15 @@ class StreamApiService {
         throw new Error(errorData.error || 'Erro ao verificar status do vídeo');
       }
 
-      return await response.json();
+      const data = await response.json();
+
+      if (!response.ok || !data.cf?.result) {
+        throw new Error("Erro ao verificar status do vídeo");
+      }
+
+      return {
+        video: data.cf.result
+      };
     } catch (error) {
       console.error('Erro ao verificar status do vídeo:', error);
       throw error;
@@ -106,7 +122,15 @@ class StreamApiService {
         throw new Error(errorData.error || 'Erro ao listar vídeos');
       }
 
-      return await response.json();
+      const data = await response.json();
+
+      if (!response.ok || !data.cf?.result) {
+        throw new Error("Erro ao verificar status do vídeo");
+      }
+
+      return {
+        video: data.cf.result
+      };
     } catch (error) {
       console.error('Erro ao listar vídeos:', error);
       throw error;
@@ -115,21 +139,21 @@ class StreamApiService {
 
   // Upload usando TUS (Tus Resumable Upload) com tus-js-client
   async uploadWithTus(file, uploadUrl, onProgress) {
-    console.log(\'uploadWithTus: Iniciando upload TUS com tus-js-client para:\', uploadUrl, \'com arquivo:\', file.name);
+    console.log('uploadWithTus: Iniciando upload TUS com tus-js-client para:', uploadUrl, 'com arquivo:', file.name);
     return new Promise((resolve, reject) => {
       const upload = new tus.Upload(file, {
-        uploadUrl: uploadUrl, // Usar uploadUrl para retomar um recurso já criado
+        endpoint: uploadUrl, // Usar endpoint para o URL de upload direta do TUS
         removeFingerprintOnSuccess: true, // Desabilitar fingerprinting para depuração
         uploadSize: file.size,
         metadata: {
           filename: file.name,
-          filetype: file.type || \'application/octet-stream\',
+          filetype: file.type || 'application/octet-stream',
         },
         chunkSize: 5 * 1024 * 1024, // 5 MB
         retryDelays: [0, 1000, 3000, 5000],
 
         onError: (error) => {
-          console.error(\'TUS error:\', error);
+          console.error("TUS error:", error);
           reject(error);
         },
 
@@ -139,7 +163,7 @@ class StreamApiService {
         },
 
         onSuccess: () => {
-          console.log(\'TUS upload concluído. URL:\', upload.url);
+          console.log("TUS upload concluído. URL:", upload.url);
           resolve({ tusUrl: upload.url });
         },
       });
