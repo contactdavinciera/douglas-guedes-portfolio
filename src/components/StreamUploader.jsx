@@ -67,7 +67,11 @@ const StreamUploader = ({
       // Obter URL de upload do backend
       console.log('StreamUploader: Solicitando URL de upload...');
       const uploadResponse = await streamApi.getUploadUrl(file, maxDurationSeconds);
-      const { uploadUrl, videoId, customerCode, uploadType } = uploadResponse;
+      const { uploadURL, uid } = uploadResponse.cf.result;
+      const uploadUrl = uploadURL; // Renomear para uploadUrl para consistência
+      const videoId = uid; // Renomear uid para videoId para consistência
+      const customerCode = null; // Não retornado pelo direct_upload, definir como null ou remover se não for usado
+      const uploadType = null; // Não retornado pelo direct_upload, definir como null ou remover se não for usado
       console.log('StreamUploader: URL de upload recebida. videoId:', videoId, 'uploadType:', uploadType);
 
       // Fazer upload baseado no tipo
@@ -80,6 +84,7 @@ const StreamUploader = ({
         });
       } else {
         console.log('StreamUploader: Iniciando upload com TUS...');
+        console.log("StreamUploader: uploadUrl antes de chamar uploadWithTus:", uploadUrl);
         await streamApi.uploadWithTus(file, uploadUrl, (progress, uploaded, total) => {
           setUploadProgress(progress);
           onUploadProgress?.(progress, uploaded, total);
