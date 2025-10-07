@@ -1,7 +1,7 @@
 // Serviço para interagir com as APIs do Cloudflare Stream
 class StreamApiService {
   constructor() {
-    this.baseUrl = process.env.REACT_APP_API_BASE_URL || '';
+    this.baseUrl = ''; // Usar caminho relativo para Cloudflare Pages Functions
     this.frontendOrigin = "douglas-guedes-portfolio.pages.dev"; // Adicionar o domínio do frontend sem protocolo para uso em allowedOrigins
   }
 
