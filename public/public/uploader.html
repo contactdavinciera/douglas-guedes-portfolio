@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="pt-br">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Uploader - Cloudflare Stream</title>
+  <style>
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,sans-serif;margin:20px}
+    .bar{height:10px;background:#eee;border-radius:6px;overflow:hidden;margin:8px 0}
+    .fill{height:100%;width:0;background:#16a34a;transition:width .2s}
+    .row{margin:12px 0}
+  </style>
+
+  <!-- tus.js via CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/tus-js-client@3.1.2/dist/tus.min.js"></script>
+
+  <h1>Uploader (Cloudflare Stream)</h1>
+  <div class="row">
+    <input id="file" type="file" accept="video/*" />
+  </div>
+  <div class="bar"><div id="fill" class="fill"></div></div>
+  <div id="status">Selecione um vídeo…</div>
+  <div id="result" class="row"></div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+
+    async function getUploadURL(){
+      const res = await fetch('/api/stream/upload', { method: 'POST' });
+      if(!res.ok) throw new Error('Falha ao obter uploadURL');
+      return res.json(); // { uploadURL, id }
+    }
+
+    document.getElementById('file').addEventListener('change', async (e)=>{
+      const file = e.target.files?.[0];
+      if(!file) return;
+
+      $('status').textContent = 'Gerando uploadURL…';
+      $('fill').style.width = '0%';
+      $('result').textContent = '';
+
+      try {
+        const { uploadURL, id } = await getUploadURL();
+
+        $('status').textContent = 'Enviando…';
+
+        const upload = new tus.Upload(file, {
+          endpoint: uploadURL,
+          metadata: { filename: file.name, filetype: file.type || 'video/mp4' },
+          onError: (err) => { $('status').textContent = '❌ Erro: ' + err; },
+          onProgress: (sent, total) => {
+            const pct = Math.floor((sent/total)*100);
+            $('fill').style.width = pct + '%';
+            $('status').textContent = `Enviando… ${pct}%`;
+          },
+          onSuccess: () => {
+            $('status').textContent = '✅ Enviado!';
+            $('result').innerHTML = `
+              <div><strong>UID:</strong> ${id}</div>
+              <div>Veja no painel Cloudflare Stream.</div>
+            `;
+          }
+        });
+
+        upload.start();
+      } catch (err) {
+        $('status').textContent = '❌ ' + err.message;
+      }
+    });
+  </script>
+</html>
