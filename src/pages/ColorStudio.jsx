@@ -203,10 +203,10 @@ const ColorStudio = () => {
         {/* Main Content */}
         <div className="flex flex-col items-center space-y-8">
           {/* Video Player Central */}
-          <div className="w-full flex justify-center" ref={containerRef}>
+          <div className="w-full flex justify-center mb-8" ref={containerRef}>
             <div className={getVideoPlayerStyle()}>
               {streamVideo ? (
-                <div className="relative">
+                <div className="relative w-full h-full">
                   <CloudflareStreamPlayer
                     videoId={streamVideo.videoId}
                     customerCode={streamVideo.customerCode}
@@ -216,7 +216,7 @@ const ColorStudio = () => {
                     onTimeUpdate={handleTimeUpdate}
                     primaryColor="#3b82f6"
                     letterboxColor="transparent"
-                    className="w-full"
+                    className="w-full h-full"
                   />
 
                   {/* LUT Preview Overlay */}
