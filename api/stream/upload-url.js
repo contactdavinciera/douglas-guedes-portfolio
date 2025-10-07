@@ -1,25 +1,25 @@
+
 // API endpoint para gerar URLs de upload direto para Cloudflare Stream
-export default async function handler(req, env, ctx) {
-  // Configurar CORS
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+export const onRequestPost = async ({ request, env }) => {
+  const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  };
 
-  if (req.method === 'OPTIONS') {
-    res.status(200).end();
-    return;
-  }
-
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Método não permitido' });
+  if (request.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { uploadLength, uploadMetadata, maxDurationSeconds = 3600 } = req.body;
+    const { uploadLength, uploadMetadata, maxDurationSeconds = 3600 } = await request.json();
 
     // Validar parâmetros obrigatórios
     if (!uploadLength) {
-      return res.status(400).json({ error: 'uploadLength é obrigatório' });
+      return new Response(JSON.stringify({ error: 'uploadLength é obrigatório' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     // Configurações do Cloudflare Stream
@@ -29,7 +29,10 @@ export default async function handler(req, env, ctx) {
 
     if (!accountId || !apiToken || !email) {
       console.error('Credenciais do Cloudflare Stream não configuradas');
-      return res.status(500).json({ error: 'Configuração do servidor incompleta' });
+      return new Response(JSON.stringify({ error: 'Configuração do servidor incompleta' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     // Determinar se usar upload básico ou TUS baseado no tamanho
@@ -65,15 +68,12 @@ export default async function handler(req, env, ctx) {
       if (!response.ok) {
         const errorData = await response.text();
         console.error("Erro na API do Cloudflare Stream (status:", response.status, "):", errorData);
-        try {
-          const errorJson = JSON.parse(errorData);
-          console.error("Detalhes do erro JSON da API do Cloudflare Stream:", errorJson);
-        } catch (jsonParseError) {
-          console.error("Não foi possível parsear a resposta de erro como JSON.", jsonParseError);
-        }
-        return res.status(response.status).json({ 
+        return new Response(JSON.stringify({ 
           error: 'Erro ao gerar URL de upload',
           details: errorData 
+        }), {
+          status: response.status,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
 
@@ -99,18 +99,13 @@ export default async function handler(req, env, ctx) {
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error("Erro na API TUS do Cloudflare Stream (resposta de texto):
-", errorText);
-        try {
-          const errorJson = JSON.parse(errorText);
-          console.error("Erro na API TUS do Cloudflare Stream (resposta JSON):
-", errorJson);
-        } catch (jsonError) {
-          console.error("Não foi possível parsear a resposta de erro como JSON.", jsonError);
-        }
-        return res.status(response.status).json({ 
+        console.error("Erro na API TUS do Cloudflare Stream (resposta de texto):\n", errorText);
+        return new Response(JSON.stringify({ 
           error: 'Erro ao gerar URL de upload TUS',
-          details: errorData 
+          details: errorText 
+        }), {
+          status: response.status,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
 
@@ -122,7 +117,7 @@ export default async function handler(req, env, ctx) {
     }
 
     // Retornar informações do upload
-    res.status(200).json({
+    return new Response(JSON.stringify({
       success: true,
       uploadUrl,
       videoId,
@@ -130,22 +125,20 @@ export default async function handler(req, env, ctx) {
       uploadType: useBasicUpload ? 'basic' : 'tus',
       maxDurationSeconds,
       expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24 horas
+    }), {
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
   } catch (error) {
     console.error('Erro interno no servidor:', error);
-    res.status(500).json({ 
+    return new Response(JSON.stringify({ 
       error: 'Erro interno do servidor',
       message: error.message 
+    }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
-}
-
-// Configuração para Vercel
-export const config = {
-  api: {
-    bodyParser: {
-      sizeLimit: '1mb',
-    },
-  },
 };
+
