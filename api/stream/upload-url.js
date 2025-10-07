@@ -64,7 +64,13 @@ export default async function handler(req, res) {
 
       if (!response.ok) {
         const errorData = await response.text();
-        console.error('Erro na API do Cloudflare Stream:', errorData);
+        console.error("Erro na API do Cloudflare Stream (status:", response.status, "):", errorData);
+        try {
+          const errorJson = JSON.parse(errorData);
+          console.error("Detalhes do erro JSON da API do Cloudflare Stream:", errorJson);
+        } catch (jsonParseError) {
+          console.error("Não foi possível parsear a resposta de erro como JSON.", jsonParseError);
+        }
         return res.status(response.status).json({ 
           error: 'Erro ao gerar URL de upload',
           details: errorData 
@@ -92,8 +98,16 @@ export default async function handler(req, res) {
       );
 
       if (!response.ok) {
-        const errorData = await response.text();
-        console.error('Erro na API TUS do Cloudflare Stream:', errorData);
+        const errorText = await response.text();
+        console.error("Erro na API TUS do Cloudflare Stream (resposta de texto):
+", errorText);
+        try {
+          const errorJson = JSON.parse(errorText);
+          console.error("Erro na API TUS do Cloudflare Stream (resposta JSON):
+", errorJson);
+        } catch (jsonError) {
+          console.error("Não foi possível parsear a resposta de erro como JSON.", jsonError);
+        }
         return res.status(response.status).json({ 
           error: 'Erro ao gerar URL de upload TUS',
           details: errorData 
