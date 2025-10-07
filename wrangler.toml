@@ -1,0 +1,38 @@
+[pages]
+main_service = "douglas-guedes-portfolio"
+
+[[r2_buckets]]
+binding = "R2_BUCKET"
+bucket_name = "douglas-guedes-portfolio-r2"
+
+[[kv_namespaces]]
+binding = "ENV_VARS"
+id = "DOUGLAS_GUEDES_ENV"
+
+[functions]
+# Define o diretório onde as funções estão localizadas
+# O Cloudflare Pages irá procurar por arquivos .js ou .ts neste diretório
+# e tratá-los como funções.
+# O entrypoint para cada função será o próprio arquivo (ex: upload-url.js)
+# e o nome da função será baseado no caminho do arquivo.
+# Por exemplo, functions/api/stream/upload-url.js será acessível em /api/stream/upload-url
+# Não é necessário especificar um 'main' ou 'entrypoint' para cada função individualmente
+# quando se usa o diretório 'functions' com Cloudflare Pages.
+# O Pages infere o entrypoint e o nome da rota automaticamente.
+# No entanto, para garantir que o Pages reconheça o diretório de funções,
+# precisamos ter a seção [functions] no wrangler.toml.
+# A propriedade 'directory' é opcional e geralmente não é necessária para Pages Functions
+# se o diretório for o padrão 'functions'.
+# Se houver um problema com o Pages não reconhecendo o diretório 'functions',
+# podemos tentar adicionar 'directory = "functions"' aqui.
+# Por enquanto, vamos manter o mínimo necessário para ver se o Pages reconhece a seção.
+
+# Para Cloudflare Pages Functions, o diretório 'functions' é o padrão.
+# Não precisamos especificar 'main' ou 'entrypoint' para cada função individualmente.
+# O Pages automaticamente descobre as funções dentro do diretório 'functions'.
+# Apenas a presença da seção [functions] é suficiente para ativá-las.
+
+# Se o erro persistir, podemos tentar adicionar:
+# directory = "functions"
+# ou configurar cada função individualmente se a estrutura for mais complexa.
+
