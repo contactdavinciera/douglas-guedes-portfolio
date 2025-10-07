@@ -9,7 +9,7 @@ export async function onRequest(context) {
   ];
 
   let maxDurationSeconds = 3600;
-  let expiry = new Date(Date.now() + 1000 * 60 * 60 * 24).toISOString(); // Default 24 hours, will be adjusted to 6h by Stream API
+  let expiry = new Date(Date.now() + 1000 * 60 * 60 * 5).toISOString(); // 5 hours to stay within 6h limit
 
   try {
     if (request.method === "POST") {
