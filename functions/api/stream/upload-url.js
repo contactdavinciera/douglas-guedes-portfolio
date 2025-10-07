@@ -7,6 +7,9 @@ export async function onRequest(context) {
   const ORIGIN_ALLOWLIST = [
     "https://douglas-guedes-portfolio.pages.dev"
   ];
+  const STREAM_ALLOWED_ORIGINS = [
+    "douglas-guedes-portfolio.pages.dev"
+  ];
 
   let maxDurationSeconds = 3600;
   let expiry = new Date(Date.now() + 1000 * 60 * 60 * 5).toISOString(); // 5 hours to stay within 6h limit
@@ -30,7 +33,7 @@ export async function onRequest(context) {
   const payload = {
     maxDurationSeconds,
     expiry,
-    allowedOrigins: ORIGIN_ALLOWLIST,
+    allowedOrigins: STREAM_ALLOWED_ORIGINS,
     creator: "douglas-portfolio"
   };
 
