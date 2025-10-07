@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Upload, Play, Download, Settings, Monitor, Palette, Zap, Award } from 'lucide-react';
+import { Upload, Play, Download, Settings, Monitor, Palette, Zap, Award, AlertCircle } from 'lucide-react';
 import { Button } from '../components/ui/button';
+import colorStudioApi from '../services/colorStudioApi';
 
 const ColorStudio = () => {
   const [uploadedFile, setUploadedFile] = useState(null);

@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Play, ArrowRight, Award, Users, Clock } from 'lucide-react'
@@ -26,14 +27,11 @@ const Home = () => {
       <section className="relative h-screen flex items-center justify-center overflow-hidden">
         {/* Background Video/Images Slideshow */}
         <div className="absolute inset-0">
-          {/* Video Background Placeholder - será substituído por vídeo real */}
+          {/* Background Placeholder */}
           <div className="absolute inset-0 bg-gradient-to-br from-black via-gray-900 to-black">
-            {/* Slideshow de imagens de trabalhos */}
             <div className="absolute inset-0 opacity-30">
               <div className="w-full h-full bg-gradient-to-br from-blue-900/50 via-purple-900/50 to-red-900/50 animate-color-shift"></div>
             </div>
-            
-            {/* Overlay escuro para legibilidade */}
             <div className="absolute inset-0 bg-black/60"></div>
           </div>
           
@@ -52,23 +50,57 @@ const Home = () => {
         </div>
 
         {/* Hero Content */}
-        <div className="relative z-10 text-center w-full h-full flex flex-col items-center justify-center px-4">
-          {/* Video Reel Placeholder */}
-          <video 
-            className="absolute inset-0 w-full h-full object-cover z-0"
-            src="https://www.w3schools.com/html/mov_bbb.mp4" 
-            autoPlay 
-            loop 
-            muted 
-            playsInline
-          />
-          <div className="absolute inset-0 bg-black/50 z-10"></div> {/* Overlay para legibilidade */}
+        <div className="relative z-10 w-full flex flex-col items-center justify-center px-4 pt-20 pb-10">
+          {/* Name and Dolby Vision Badge */}
+          <div className="flex items-center mb-4 animate-fade-in-up">
+            <h1 className="text-5xl md:text-7xl font-bold text-white mr-4">Douglas Guedes</h1>
+            <img src="/assets/dolby-vision-badge.png" alt="Dolby Vision Certified" className="h-12 md:h-16" />
+          </div>
 
-          <div className="relative z-20 animate-fade-in-up">
-            <p className="text-3xl md:text-5xl font-serif italic text-white mb-8 leading-tight">
+          {/* Video Reel */}
+          <div className="relative w-full max-w-2xl aspect-video rounded-lg overflow-hidden shadow-2xl animate-fade-in-up">
+            <video 
+              className="w-full h-full object-cover"
+              src="https://assets.mixkit.co/videos/preview/mixkit-a-man-working-with-a-camera-and-a-computer-4201-large.mp4" 
+              autoPlay 
+              loop 
+              muted 
+              playsInline
+            />
+            <div className="absolute inset-0 bg-black/30"></div> {/* Overlay sutil */}
+          </div>
+
+          {/* Frase de Efeito */}
+          <div className="mt-6 p-4 bg-gray-900/70 backdrop-blur-sm rounded-lg shadow-xl text-center animate-fade-in-up delay-300 max-w-xl">
+            <p className="text-xl md:text-2xl font-serif italic text-gray-200 leading-tight">
               "Onde a cor encontra a emoção: Elevando sua narrativa através da cor."
             </p>
+          </div>
 
+          {/* Botões de Ação */}
+          <div className="mt-10 flex flex-col sm:flex-row gap-6 justify-center items-center animate-fade-in-up delay-500">
+            <Button
+              size="lg"
+              className="bg-gradient-to-r from-blue-500 to-purple-500 text-white hover:from-blue-600 hover:to-purple-600 px-10 py-4 text-lg font-semibold rounded-full shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+              asChild
+            >
+              <Link to="/portfolio">
+                Ver Portfólio
+                <ArrowRight className="ml-2" size={20} />
+              </Link>
+            </Button>
+            
+            <Button
+              variant="outline"
+              size="lg"
+              className="border-2 border-white/50 text-white hover:bg-white hover:text-black px-10 py-4 text-lg rounded-full backdrop-blur-sm transition-all duration-300 transform hover:scale-105"
+              asChild
+            >
+              <Link to="/color-studio">
+                <Play className="mr-2" size={20} />
+                Experimentar Color Studio
+              </Link>
+            </Button>
           </div>
         </div>
 
@@ -200,3 +232,4 @@ const Home = () => {
 }
 
 export default Home
+
