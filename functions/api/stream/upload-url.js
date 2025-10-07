@@ -27,6 +27,16 @@ export const onRequestPost = async ({ request, env }) => {
     const apiToken = env.CLOUDFLARE_API_TOKEN;
     const email = env.CLOUDFLARE_EMAIL;
 
+    // Debug: Retornar as variáveis de ambiente para verificar se estão sendo carregadas
+    return new Response(JSON.stringify({
+      accountId: env.CLOUDFLARE_ACCOUNT_ID,
+      apiToken: env.CLOUDFLARE_API_TOKEN,
+      email: env.CLOUDFLARE_EMAIL,
+    }), {
+      status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+
     if (!accountId || !apiToken || !email) {
       console.error('Credenciais do Cloudflare Stream não configuradas');
       return new Response(JSON.stringify({ error: 'Configuração do servidor incompleta' }), {
