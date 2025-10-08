@@ -32,29 +32,12 @@ class StreamApiService {
    */
   async getUploadUrl(file, maxDurationSeconds = 3600) {
     try {
-      const metadata = this.analyzeFile(file);
-      
-      const uploadMetadata = {
-        filename: btoa(file.name),
-        filetype: btoa(file.type),
-        format: btoa(metadata.format),
-        colorSpace: btoa(metadata.colorSpace),
-        maxDurationSeconds: btoa(maxDurationSeconds.toString())
-      };
-
-      const metadataString = Object.entries(uploadMetadata)
-        .map(([key, value]) => `${key} ${value}`)
-        .join(",");
-
       const response = await this.retryRequest(async () => {
         const res = await fetch(`${this.baseUrl}/api/color-studio/upload-url`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            uploadLength: file.size,
-            uploadMetadata: metadataString,
-            maxDurationSeconds: Math.min(maxDurationSeconds, 21600),
-            allowedOrigins: [this.frontendOrigin]
+            maxDurationSeconds: Math.min(maxDurationSeconds, 21600)
           })
         });
 
