@@ -361,55 +361,68 @@ def get_luts():
 @color_studio_bp.route('/upload-url', methods=['POST'])
 def get_stream_upload_url():
     """
-    Obtém URL de upload do Cloudflare Stream
+    Obtém URL de upload do Cloudflare Stream via TUS
     """
     try:
         CLOUDFLARE_ACCOUNT_ID = os.getenv('CLOUDFLARE_ACCOUNT_ID')
         CLOUDFLARE_API_TOKEN = os.getenv('CLOUDFLARE_API_TOKEN')
         
-        # Validar credenciais
         if not CLOUDFLARE_ACCOUNT_ID or not CLOUDFLARE_API_TOKEN:
             return jsonify({
                 'success': False,
                 'error': 'Credenciais do Cloudflare não configuradas'
             }), 500
         
-        # Log para debug
         print(f"🔑 Account ID: {CLOUDFLARE_ACCOUNT_ID[:8]}...")
         
-        # Fazer requisição ao Cloudflare Stream
-        url = f'https://api.cloudflare.com/client/v4/accounts/{CLOUDFLARE_ACCOUNT_ID}/stream?direct_user=true'
+        # URL correta para TUS upload
+        url = f'https://api.cloudflare.com/client/v4/accounts/{CLOUDFLARE_ACCOUNT_ID}/stream'
         
         headers = {
             'Authorization': f'Bearer {CLOUDFLARE_API_TOKEN}',
+            'Tus-Resumable': '1.0.0',
+            'Upload-Length': '0',  # Será definido pelo TUS no frontend
         }
         
-        print(f"📤 Fazendo requisição TUS para: {url}")
+        print(f"📤 Criando sessão TUS para: {url}")
         
+        # POST vazio para criar sessão TUS
         response = requests.post(url, headers=headers)
-
-        response_data = response.json()
         
         print(f"📥 Status: {response.status_code}")
-        print(f"📥 Response: {response_data}")
+        print(f"📥 Headers: {dict(response.headers)}")
         
-        if response.status_code == 200 and response_data.get('success'):
-            return jsonify({
-                'success': True,
-                'uploadURL': response_data['result']['uploadURL'],
-                'uid': response_data['result']['uid']
-            }), 200
+        if response.status_code in [200, 201]:
+            # TUS retorna a URL no header 'Location'
+            upload_url = response.headers.get('Location')
+            # UID pode estar no header Stream-Media-Id
+            uid = response.headers.get('Stream-Media-Id', 'unknown')
+            
+            if upload_url:
+                return jsonify({
+                    'success': True,
+                    'uploadURL': upload_url,
+                    'uid': uid
+                }), 200
+            else:
+                return jsonify({
+                    'success': False,
+                    'error': 'URL de upload não retornada pelo Cloudflare'
+                }), 500
         else:
+            error_msg = response.text
+            print(f"❌ Erro: {error_msg}")
             return jsonify({
                 'success': False,
-                'error': response_data.get('errors', [{'message': 'Erro desconhecido'}])
+                'error': f'Erro {response.status_code}: {error_msg}'
             }), response.status_code
             
     except Exception as e:
-        print(f"❌ Erro ao obter URL de upload: {str(e)}")
+        print(f"❌ Erro ao criar sessão TUS: {str(e)}")
         import traceback
         traceback.print_exc()
         return jsonify({
             'success': False,
             'error': str(e)
         }), 500
+

@@ -1,4 +1,4 @@
-
+import * as tus from "tus-js-client";
 
 /**
  * Serviço para interagir com Cloudflare Stream API
@@ -61,7 +61,7 @@ class StreamApiService {
     }
   }
 
-import * as tus from "tus-js-client";
+
 
   /**
    * Upload usando TUS (Resumable Upload Protocol)
