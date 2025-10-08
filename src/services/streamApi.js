@@ -1,18 +1,39 @@
 import * as tus from "tus-js-client";
 
-// Serviço para interagir com as APIs do Cloudflare Stream
+/**
+ * Serviço para interagir com Cloudflare Stream API
+ * Versão otimizada com tratamento de erros robusto
+ */
 class StreamApiService {
   constructor() {
     this.baseUrl = 
-    this.frontendOrigin = "douglas-guedes-portfolio.pages.dev"; // Adicionar o domínio do frontend sem protocolo para uso em allowedOrigins
+    this.frontendOrigin = "douglas-guedes-portfolio.pages.dev";
+    this.maxRetries = 3;
+    this.retryDelay = 1000; // 1 segundo
   }
 
-  // Obter URL de upload direto
+  /**
+   * Retry helper para requisições que falharam
+   */
+  async retryRequest(fn, retries = this.maxRetries) {
+    for (let i = 0; i < retries; i++) {
+      try {
+        return await fn();
+      } catch (error) {
+        if (i === retries - 1) throw error;
+        console.log(`Tentativa ${i + 1} falhou, tentando novamente...`);
+        await new Promise(resolve => setTimeout(resolve, this.retryDelay * (i + 1)));
+      }
+    }
+  }
+
+  /**
+   * Obter URL de upload direto do Cloudflare Stream
+   */
   async getUploadUrl(file, maxDurationSeconds = 3600) {
     try {
       const metadata = this.analyzeFile(file);
       
-      // Preparar metadados para o upload
       const uploadMetadata = {
         filename: btoa(file.name),
         filetype: btoa(file.type),
@@ -21,74 +42,118 @@ class StreamApiService {
         maxDurationSeconds: btoa(maxDurationSeconds.toString())
       };
 
-      // Converter metadados para o formato esperado pelo TUS
       const metadataString = Object.entries(uploadMetadata)
         .map(([key, value]) => `${key} ${value}`)
         .join(",");
 
-      const response = await fetch(`${this.baseUrl}/api/stream/upload-url`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          uploadLength: file.size,
-          uploadMetadata: metadataString,
-          maxDurationSeconds: Math.min(maxDurationSeconds, 21600), // garante limite de 6h,
-          allowedOrigins: [this.frontendOrigin] // Passar o origin do frontend para o backend
-        })
+      const response = await this.retryRequest(async () => {
+        const res = await fetch(`${this.baseUrl}/api/stream/upload-url`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            uploadLength: file.size,
+            uploadMetadata: metadataString,
+            maxDurationSeconds: Math.min(maxDurationSeconds, 21600),
+            allowedOrigins: [this.frontendOrigin]
+          })
+        });
+
+        if (!res.ok) {
+          const errorData = await res.json().catch(() => ({}));
+          throw new Error(errorData.error || `HTTP ${res.status}: Erro ao obter URL de upload`);
+        }
+
+        return res.json();
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Erro ao obter URL de upload");
+      if (!response.cf?.result) {
+        throw new Error("Resposta inválida da API do Cloudflare Stream");
       }
 
-      const data = await response.json();
+      return response.cf.result;
 
-      if (!data.cf?.result?.uploadURL || !data.cf?.result?.uid) {
-        throw new Error("Dados de upload inválidos recebidos");
-      }
-
-      return {
-        uploadURL: data.cf.result.uploadURL,
-        uid: data.cf.result.uid
-      };
     } catch (error) {
-      console.error("Erro ao obter URL de upload:", error);
-      throw error;
+      console.error("❌ Erro ao obter URL de upload:", error);
+      throw new Error(`Falha ao obter URL de upload: ${error.message}`);
     }
   }
 
-  // Verificar status do vídeo
+  /**
+   * Upload usando TUS (Resumable Upload Protocol)
+   */
+  async uploadWithTus(file, uploadUrl, onProgress) {
+    return new Promise((resolve, reject) => {
+      const upload = new tus.Upload(file, {
+        endpoint: uploadUrl,
+        removeFingerprintOnSuccess: true,
+        uploadSize: file.size,
+        metadata: {
+          filename: file.name,
+          filetype: file.type || "application/octet-stream",
+        },
+        chunkSize: 5 * 1024 * 1024, // 5 MB por chunk
+        retryDelays: [0, 1000, 3000, 5000, 10000],
+
+        onError: (error) => {
+          console.error("❌ Erro TUS:", error);
+          reject(new Error(`Upload falhou: ${error.message || error}`));
+        },
+
+        onProgress: (bytesSent, bytesTotal) => {
+          const progress = Math.floor((bytesSent / bytesTotal) * 100);
+          if (onProgress) {
+            onProgress(progress, bytesSent, bytesTotal);
+          }
+        },
+
+        onSuccess: () => {
+          console.log("✅ Upload TUS concluído:", upload.url);
+          resolve({ 
+            success: true,
+            tusUrl: upload.url,
+            uploadedBytes: file.size
+          });
+        },
+      });
+
+      upload.start();
+    });
+  }
+
+  /**
+   * Verificar status do vídeo
+   */
   async getVideoStatus(videoId) {
     try {
-      const response = await fetch(`${this.baseUrl}/api/stream/video-status?videoId=${videoId}`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
+      const response = await this.retryRequest(async () => {
+        const res = await fetch(
+          `${this.baseUrl}/api/stream/video-status?videoId=${videoId}`,
+          { method: "GET", headers: { "Content-Type": "application/json" } }
+        );
+
+        if (!res.ok) {
+          const errorData = await res.json().catch(() => ({}));
+          throw new Error(errorData.error || `HTTP ${res.status}`);
         }
+
+        return res.json();
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Erro ao verificar status do vídeo");
+      if (!response.cf?.result) {
+        throw new Error("Resposta inválida ao verificar status");
       }
 
-      const data = await response.json();
+      return response.cf.result;
 
-      if (!data.cf?.result) {
-        throw new Error("Dados de vídeo inválidos recebidos");
-      }
-
-      return data.cf.result;
     } catch (error) {
-      console.error("Erro ao verificar status do vídeo:", error);
-      throw error;
+      console.error("❌ Erro ao verificar status:", error);
+      throw new Error(`Falha ao verificar status: ${error.message}`);
     }
   }
 
-  // Listar vídeos
+  /**
+   * Listar vídeos do Stream
+   */
   async listVideos(options = {}) {
     try {
       const {
@@ -109,113 +174,37 @@ class StreamApiService {
         sortOrder
       });
 
-      const response = await fetch(`${this.baseUrl}/api/stream/list-videos?${queryParams.toString()}`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
+      const response = await this.retryRequest(async () => {
+        const res = await fetch(
+          `${this.baseUrl}/api/stream/list-videos?${queryParams.toString()}`,
+          { method: "GET", headers: { "Content-Type": "application/json" } }
+        );
+
+        if (!res.ok) {
+          const errorData = await res.json().catch(() => ({}));
+          throw new Error(errorData.error || `HTTP ${res.status}`);
         }
+
+        return res.json();
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Erro ao listar vídeos");
-      }
-
-      const data = await response.json();
-
-      if (!data.cf?.result) {
-        throw new Error("Dados de vídeo inválidos recebidos");
-      }
-
       return {
-        videos: data.cf.result.videos || [],
-        total: data.cf.result.total || 0
+        videos: response.cf?.result?.videos || [],
+        total: response.cf?.result?.total || 0
       };
+
     } catch (error) {
-      console.error("Erro ao listar vídeos:", error);
-      throw error;
+      console.error("❌ Erro ao listar vídeos:", error);
+      throw new Error(`Falha ao listar vídeos: ${error.message}`);
     }
   }
 
-  // Upload usando TUS (Tus Resumable Upload) com tus-js-client
-  async uploadWithTus(file, uploadUrl, onProgress) {
-    console.log("uploadWithTus: Iniciando upload TUS com tus-js-client para:", uploadUrl, "com arquivo:", file.name);
-    return new Promise((resolve, reject) => {
-      const upload = new tus.Upload(file, {
-        endpoint: uploadUrl, // Usar endpoint para o URL de upload direta do TUS
-        removeFingerprintOnSuccess: true, // Desabilitar fingerprinting para depuração
-        uploadSize: file.size,
-        metadata: {
-          filename: file.name,
-          filetype: file.type || "application/octet-stream",
-        },
-        chunkSize: 5 * 1024 * 1024, // 5 MB
-        retryDelays: [0, 1000, 3000, 5000],
-
-        onError: (error) => {
-          console.error("TUS error:", error);
-          reject(error);
-        },
-
-        onProgress: (bytesSent, bytesTotal) => {
-          const pct = Math.floor((bytesSent / bytesTotal) * 100);
-          if (onProgress) onProgress(pct, bytesSent, bytesTotal);
-        },
-
-        onSuccess: () => {
-          console.log("TUS upload concluído. URL:", upload.url);
-          resolve({ tusUrl: upload.url });
-        },
-      });
-
-      upload.start();
-    });
-  }
-
-  // Upload básico para arquivos pequenos
-  async uploadBasic(file, uploadUrl, onProgress) {
-    console.log("uploadBasic: Iniciando upload básico para:", uploadUrl, "com arquivo:", file.name);
-    return new Promise((resolve, reject) => {
-      const formData = new FormData();
-      formData.append("file", file);
-
-      const xhr = new XMLHttpRequest();
-
-      xhr.upload.addEventListener("progress", (event) => {
-        if (event.lengthComputable) {
-          const progress = Math.round((event.loaded / event.total) * 100);
-          onProgress?.(progress, event.loaded, event.total);
-          console.log("uploadBasic: Progresso:", progress);
-        }
-      });
-
-      xhr.addEventListener("load", () => {
-        if (xhr.status >= 200 && xhr.status < 300) {
-          console.log("uploadBasic: Upload básico concluído.");
-          resolve({
-            success: true,
-            uploadedBytes: file.size,
-            totalBytes: file.size
-          });
-        } else {
-          console.error("uploadBasic: Erro no upload:", xhr.status, xhr.statusText);
-          reject(new Error(`Erro no upload: ${xhr.statusText}`));
-        }
-      });
-
-      xhr.addEventListener("error", () => {
-        console.error("uploadBasic: Erro de rede durante o upload.");
-        reject(new Error("Erro de rede durante o upload"));
-      });
-
-      xhr.open("POST", uploadUrl);
-      xhr.send(formData);
-    });
-  }
-
-  // Analisar arquivo e detectar metadados
+  /**
+   * Analisar arquivo e detectar metadados
+   */
   analyzeFile(file) {
     const extension = file.name.split(".").pop()?.toLowerCase() || "";
+    
     const formats = {
       "braw": { format: "BRAW", colorSpace: "Blackmagic Wide Gamut", isRaw: true },
       "r3d": { format: "RED R3D", colorSpace: "REDWideGamutRGB", isRaw: true },
@@ -226,44 +215,100 @@ class StreamApiService {
       "dng": { format: "Cinema DNG", colorSpace: "Linear", isRaw: true }
     };
 
-    const fileInfo = formats[extension] || { format: "Unknown", colorSpace: "Unknown", isRaw: false };
+    const fileInfo = formats[extension] || { 
+      format: "Unknown", 
+      colorSpace: "Unknown", 
+      isRaw: false 
+    };
     
     return {
       name: file.name,
       size: file.size,
       type: file.type,
       lastModified: file.lastModified,
+      extension,
       ...fileInfo
     };
   }
 
-  // Aguardar processamento do vídeo
-  async waitForProcessing(videoId, maxAttempts = 30, interval = 2000) {
-    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+  /**
+   * Aguardar processamento do vídeo com polling
+   */
+  async waitForProcessing(videoId, maxAttempts = 60, interval = 2000) {
+    console.log(`⏳ Aguardando processamento do vídeo ${videoId}...`);
+    
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
         const statusResponse = await this.getVideoStatus(videoId);
-        const video = statusResponse.video;
+        const video = statusResponse.video || statusResponse;
+
+        console.log(`Tentativa ${attempt}/${maxAttempts} - Status: ${video.status}`);
 
         if (video.ready) {
+          console.log("✅ Vídeo processado com sucesso!");
           return video;
         }
 
         if (video.status === "error") {
-          throw new Error("Erro no processamento do vídeo");
+          throw new Error("Erro no processamento do vídeo pelo Cloudflare Stream");
         }
 
         // Aguardar antes da próxima verificação
         await new Promise(resolve => setTimeout(resolve, interval));
+        
       } catch (error) {
-        if (attempt === maxAttempts - 1) {
-          throw error;
+        if (attempt === maxAttempts) {
+          throw new Error(`Timeout: Vídeo não processado após ${maxAttempts} tentativas`);
         }
-        // Aguardar antes de tentar novamente
+        
+        // Se não for a última tentativa, aguarda e tenta novamente
+        console.warn(`⚠️ Erro na tentativa ${attempt}, tentando novamente...`);
         await new Promise(resolve => setTimeout(resolve, interval));
       }
     }
 
     throw new Error("Timeout: Vídeo não foi processado no tempo esperado");
+  }
+
+  /**
+   * Formatar tamanho de arquivo
+   */
+  formatFileSize(bytes) {
+    if (bytes === 0) return "0 Bytes";
+    const k = 1024;
+    const sizes = ["Bytes", "KB", "MB", "GB", "TB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
+  }
+
+  /**
+   * Formatar duração
+   */
+  formatDuration(seconds) {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = Math.floor(seconds % 60);
+
+    if (hours > 0) {
+      return `${hours}:${minutes.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+    }
+    return `${minutes}:${secs.toString().padStart(2, "0")}`;
+  }
+
+  /**
+   * Obter cor do formato
+   */
+  getFormatColor(format) {
+    const colors = {
+      "BRAW": "#ff6b35",
+      "RED R3D": "#dc2626",
+      "ALEXA": "#059669",
+      "Sony MXF": "#3b82f6",
+      "Cinema DNG": "#8b5cf6",
+      "QuickTime": "#6b7280",
+      "MP4": "#6b7280",
+    };
+    return colors[format] || "#6b7280";
   }
 }
 
