@@ -47,7 +47,7 @@ class StreamApiService {
         .join(",");
 
       const response = await this.retryRequest(async () => {
-        const res = await fetch(`${this.baseUrl}/api/stream/upload-url`, {
+        const res = await fetch(`${this.baseUrl}/api/color-studio/get-upload-url`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -60,17 +60,17 @@ class StreamApiService {
 
         if (!res.ok) {
           const errorData = await res.json().catch(() => ({}));
-          throw new Error(errorData.error || `HTTP ${res.status}: Erro ao obter URL de upload`);
+          throw new Error(errorData.error || `HTTP ${res.status}: Erro ao obter URL de upload do backend`);
         }
 
         return res.json();
       });
 
-      if (!response.cf?.result) {
-        throw new Error("Resposta inválida da API do Cloudflare Stream");
+      if (!response.uploadURL || !response.uid) {
+        throw new Error("Resposta inválida do backend para URL de upload");
       }
 
-      return response.cf.result;
+      return response;
 
     } catch (error) {
       console.error("❌ Erro ao obter URL de upload:", error);
