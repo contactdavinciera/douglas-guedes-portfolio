@@ -65,8 +65,7 @@ const Header = () => {
               <a
                 key={item.name}
                 href={item.href}
-                onClick={(e) => {
-                  e.preventDefault()
+                onClick={() => {
                   setActiveSection(item.href)
                 }}
                 className={`relative px-4 py-2 text-sm font-medium transition-all duration-300 rounded-lg group ${
@@ -126,8 +125,7 @@ const Header = () => {
               <a
                 key={item.name}
                 href={item.href}
-                onClick={(e) => {
-                  e.preventDefault()
+                onClick={() => {
                   setActiveSection(item.href)
                   setIsMenuOpen(false)
                 }}
