@@ -37,20 +37,21 @@ class StreamApiService {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            maxDurationSeconds: Math.min(maxDurationSeconds, 21600)
+            fileSize: file.size,
+            fileName: file.name
           })
         });
 
         if (!res.ok) {
           const errorData = await res.json().catch(() => ({}));
-          throw new Error(errorData.error || `HTTP ${res.status}: Erro ao obter URL de upload do backend`);
+          throw new Error(errorData.error || `HTTP ${res.status}: Erro ao obter URL de upload`);
         }
 
         return res.json();
       });
 
       if (!response.uploadURL || !response.uid) {
-        throw new Error("Resposta inválida do backend para URL de upload");
+        throw new Error("Resposta inválida do backend");
       }
 
       return response;
