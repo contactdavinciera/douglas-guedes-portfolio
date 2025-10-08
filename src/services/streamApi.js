@@ -3,7 +3,7 @@ import * as tus from "tus-js-client";
 // Serviço para interagir com as APIs do Cloudflare Stream
 class StreamApiService {
   constructor() {
-    this.baseUrl = ''; // Usar caminho relativo para Cloudflare Pages Functions
+    this.baseUrl = 
     this.frontendOrigin = "douglas-guedes-portfolio.pages.dev"; // Adicionar o domínio do frontend sem protocolo para uso em allowedOrigins
   }
 
@@ -24,12 +24,12 @@ class StreamApiService {
       // Converter metadados para o formato esperado pelo TUS
       const metadataString = Object.entries(uploadMetadata)
         .map(([key, value]) => `${key} ${value}`)
-        .join(',');
+        .join(",");
 
       const response = await fetch(`${this.baseUrl}/api/stream/upload-url`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           uploadLength: file.size,
@@ -41,21 +41,21 @@ class StreamApiService {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Erro ao obter URL de upload');
+        throw new Error(errorData.error || "Erro ao obter URL de upload");
       }
 
       const data = await response.json();
 
-      if (!response.ok || !data.cf?.result) {
-        throw new Error("Erro ao listar vídeos");
+      if (!data.cf?.result?.uploadURL || !data.cf?.result?.uid) {
+        throw new Error("Dados de upload inválidos recebidos");
       }
 
       return {
-        videos: data.cf.result.videos || [],
-        total: data.cf.result.total || 0
+        uploadURL: data.cf.result.uploadURL,
+        uid: data.cf.result.uid
       };
     } catch (error) {
-      console.error('Erro ao obter URL de upload:', error);
+      console.error("Erro ao obter URL de upload:", error);
       throw error;
     }
   }
@@ -64,29 +64,26 @@ class StreamApiService {
   async getVideoStatus(videoId) {
     try {
       const response = await fetch(`${this.baseUrl}/api/stream/video-status?videoId=${videoId}`, {
-        method: 'GET',
+        method: "GET",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         }
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Erro ao verificar status do vídeo');
+        throw new Error(errorData.error || "Erro ao verificar status do vídeo");
       }
 
       const data = await response.json();
 
-      if (!response.ok || !data.cf?.result) {
-        throw new Error("Erro ao listar vídeos");
+      if (!data.cf?.result) {
+        throw new Error("Dados de vídeo inválidos recebidos");
       }
 
-      return {
-        videos: data.cf.result.videos || [],
-        total: data.cf.result.total || 0
-      };
+      return data.cf.result;
     } catch (error) {
-      console.error('Erro ao verificar status do vídeo:', error);
+      console.error("Erro ao verificar status do vídeo:", error);
       throw error;
     }
   }
@@ -97,10 +94,10 @@ class StreamApiService {
       const {
         page = 1,
         limit = 20,
-        status = 'all',
-        search = '',
-        sortBy = 'created',
-        sortOrder = 'desc'
+        status = "all",
+        search = "",
+        sortBy = "created",
+        sortOrder = "desc"
       } = options;
 
       const queryParams = new URLSearchParams({
@@ -113,21 +110,21 @@ class StreamApiService {
       });
 
       const response = await fetch(`${this.baseUrl}/api/stream/list-videos?${queryParams.toString()}`, {
-        method: 'GET',
+        method: "GET",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         }
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Erro ao listar vídeos');
+        throw new Error(errorData.error || "Erro ao listar vídeos");
       }
 
       const data = await response.json();
 
-      if (!response.ok || !data.cf?.result) {
-        throw new Error("Erro ao listar vídeos");
+      if (!data.cf?.result) {
+        throw new Error("Dados de vídeo inválidos recebidos");
       }
 
       return {
@@ -135,14 +132,14 @@ class StreamApiService {
         total: data.cf.result.total || 0
       };
     } catch (error) {
-      console.error('Erro ao listar vídeos:', error);
+      console.error("Erro ao listar vídeos:", error);
       throw error;
     }
   }
 
   // Upload usando TUS (Tus Resumable Upload) com tus-js-client
   async uploadWithTus(file, uploadUrl, onProgress) {
-    console.log('uploadWithTus: Iniciando upload TUS com tus-js-client para:', uploadUrl, 'com arquivo:', file.name);
+    console.log("uploadWithTus: Iniciando upload TUS com tus-js-client para:", uploadUrl, "com arquivo:", file.name);
     return new Promise((resolve, reject) => {
       const upload = new tus.Upload(file, {
         endpoint: uploadUrl, // Usar endpoint para o URL de upload direta do TUS
@@ -150,7 +147,7 @@ class StreamApiService {
         uploadSize: file.size,
         metadata: {
           filename: file.name,
-          filetype: file.type || 'application/octet-stream',
+          filetype: file.type || "application/octet-stream",
         },
         chunkSize: 5 * 1024 * 1024, // 5 MB
         retryDelays: [0, 1000, 3000, 5000],
@@ -177,59 +174,59 @@ class StreamApiService {
 
   // Upload básico para arquivos pequenos
   async uploadBasic(file, uploadUrl, onProgress) {
-    console.log('uploadBasic: Iniciando upload básico para:', uploadUrl, 'com arquivo:', file.name);
+    console.log("uploadBasic: Iniciando upload básico para:", uploadUrl, "com arquivo:", file.name);
     return new Promise((resolve, reject) => {
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append("file", file);
 
       const xhr = new XMLHttpRequest();
 
-      xhr.upload.addEventListener('progress', (event) => {
+      xhr.upload.addEventListener("progress", (event) => {
         if (event.lengthComputable) {
           const progress = Math.round((event.loaded / event.total) * 100);
           onProgress?.(progress, event.loaded, event.total);
-          console.log('uploadBasic: Progresso:', progress);
+          console.log("uploadBasic: Progresso:", progress);
         }
       });
 
-      xhr.addEventListener('load', () => {
+      xhr.addEventListener("load", () => {
         if (xhr.status >= 200 && xhr.status < 300) {
-          console.log('uploadBasic: Upload básico concluído.');
+          console.log("uploadBasic: Upload básico concluído.");
           resolve({
             success: true,
             uploadedBytes: file.size,
             totalBytes: file.size
           });
         } else {
-          console.error('uploadBasic: Erro no upload:', xhr.status, xhr.statusText);
+          console.error("uploadBasic: Erro no upload:", xhr.status, xhr.statusText);
           reject(new Error(`Erro no upload: ${xhr.statusText}`));
         }
       });
 
-      xhr.addEventListener('error', () => {
-        console.error('uploadBasic: Erro de rede durante o upload.');
-        reject(new Error('Erro de rede durante o upload'));
+      xhr.addEventListener("error", () => {
+        console.error("uploadBasic: Erro de rede durante o upload.");
+        reject(new Error("Erro de rede durante o upload"));
       });
 
-      xhr.open('POST', uploadUrl);
+      xhr.open("POST", uploadUrl);
       xhr.send(formData);
     });
   }
 
   // Analisar arquivo e detectar metadados
   analyzeFile(file) {
-    const extension = file.name.split('.').pop()?.toLowerCase() || '';
+    const extension = file.name.split(".").pop()?.toLowerCase() || "";
     const formats = {
-      'braw': { format: 'BRAW', colorSpace: 'Blackmagic Wide Gamut', isRaw: true },
-      'r3d': { format: 'RED R3D', colorSpace: 'REDWideGamutRGB', isRaw: true },
-      'ari': { format: 'ALEXA', colorSpace: 'LogC', isRaw: true },
-      'mov': { format: 'QuickTime', colorSpace: 'Rec.709', isRaw: false },
-      'mp4': { format: 'MP4', colorSpace: 'Rec.709', isRaw: false },
-      'mxf': { format: 'Sony MXF', colorSpace: 'S-Gamut3', isRaw: true },
-      'dng': { format: 'Cinema DNG', colorSpace: 'Linear', isRaw: true }
+      "braw": { format: "BRAW", colorSpace: "Blackmagic Wide Gamut", isRaw: true },
+      "r3d": { format: "RED R3D", colorSpace: "REDWideGamutRGB", isRaw: true },
+      "ari": { format: "ALEXA", colorSpace: "LogC", isRaw: true },
+      "mov": { format: "QuickTime", colorSpace: "Rec.709", isRaw: false },
+      "mp4": { format: "MP4", colorSpace: "Rec.709", isRaw: false },
+      "mxf": { format: "Sony MXF", colorSpace: "S-Gamut3", isRaw: true },
+      "dng": { format: "Cinema DNG", colorSpace: "Linear", isRaw: true }
     };
 
-    const fileInfo = formats[extension] || { format: 'Unknown', colorSpace: 'Unknown', isRaw: false };
+    const fileInfo = formats[extension] || { format: "Unknown", colorSpace: "Unknown", isRaw: false };
     
     return {
       name: file.name,
@@ -251,8 +248,8 @@ class StreamApiService {
           return video;
         }
 
-        if (video.status === 'error') {
-          throw new Error('Erro no processamento do vídeo');
+        if (video.status === "error") {
+          throw new Error("Erro no processamento do vídeo");
         }
 
         // Aguardar antes da próxima verificação
@@ -266,7 +263,7 @@ class StreamApiService {
       }
     }
 
-    throw new Error('Timeout: Vídeo não foi processado no tempo esperado');
+    throw new Error("Timeout: Vídeo não foi processado no tempo esperado");
   }
 }
 
