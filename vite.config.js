@@ -9,6 +9,9 @@ export default defineConfig({
     watch: { usePolling: true },
   },
   plugins: [react(), tailwindcss()],
+  optimizeDeps: {
+    exclude: ['tus-js-client'],
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
