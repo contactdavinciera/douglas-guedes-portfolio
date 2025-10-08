@@ -106,23 +106,21 @@ const Portfolio = () => {
         </div>
 
         {/* Slider */}
-        <div className="absolute inset-0 flex items-center">
-          <input
-            type="range"
-            min="0"
-            max="100"
-            value={sliderPosition}
-            onChange={(e) => setSliderPosition(e.target.value)}
-            className="w-full h-full opacity-0 cursor-col-resize"
-          />
-          <div 
-            className="absolute w-1 h-full bg-white shadow-lg pointer-events-none"
-            style={{ left: `${sliderPosition}%`, transform: 'translateX(-50%)' }}
-          >
-            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-8 h-8 bg-white rounded-full shadow-lg flex items-center justify-center">
-              <ArrowLeft size={12} className="text-gray-800 -ml-1" />
-              <ArrowRight size={12} className="text-gray-800 -mr-1" />
-            </div>
+        <input
+          type="range"
+          min="0"
+          max="100"
+          value={sliderPosition}
+          onChange={(e) => setSliderPosition(e.target.value)}
+          className="absolute inset-0 w-full h-full opacity-0 cursor-col-resize"
+        />
+        <div 
+          className="absolute w-1 h-full bg-white shadow-lg pointer-events-none"
+          style={{ left: `${sliderPosition}%`, transform: 'translateX(-50%)' }}
+        >
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-8 h-8 bg-white rounded-full shadow-lg flex items-center justify-center">
+            <ArrowLeft size={12} className="text-gray-800 -ml-1" />
+            <ArrowRight size={12} className="text-gray-800 -mr-1" />
           </div>
         </div>
 

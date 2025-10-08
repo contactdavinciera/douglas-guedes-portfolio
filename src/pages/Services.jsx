@@ -273,7 +273,7 @@ const Services = () => {
             Pronto para começar seu projeto?
           </h2>
           <p className="text-xl text-gray-300 mb-8">
-            Entre em contato para discutir suas necessidades e receber um orçamento personalizado
+            Transforme suas imagens em experiências cinematográficas inesquecíveis
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button
@@ -297,3 +297,4 @@ const Services = () => {
 }
 
 export default Services
+
