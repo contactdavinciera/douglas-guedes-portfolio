@@ -1,28 +1,9 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import tailwindcss from '@tailwindcss/vite'
-import path from 'path'
 
-// https://vitejs.dev/config/
 export default defineConfig({
-  base: './',
-
-
-  server: {
-    watch: {
-      usePolling: true
-    }
-  },
-  plugins: [react(),tailwindcss()],
-  build: {
-    rollupOptions: {
-      external: ['tus-js-client'],
-    },
-  },
-  resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
-    },
-  },
+  plugins: [react()],
+  // Em Cloudflare Pages na raiz do domínio, use "/" para evitar tela branca por caminho relativo
+  base: "/",
+  build: { sourcemap: true } // ajuda a ver erro real no console, se tiver
 })
-
