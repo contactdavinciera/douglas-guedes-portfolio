@@ -401,10 +401,8 @@ def get_stream_upload_url():
         if response.status_code == 200 and response_data.get('success'):
             return jsonify({
                 'success': True,
-                'result': {
-                    'uploadURL': response_data['result']['uploadURL'],
-                    'uid': response_data['result']['uid']
-                }
+                'uploadURL': response_data['result']['uploadURL'],
+                'uid': response_data['result']['uid']
             }), 200
         else:
             return jsonify({
