@@ -75,9 +75,9 @@ const StreamUploader = ({
       console.log('StreamUploader: URL de upload recebida. videoId:', videoId, 'uploadType:', uploadType);
 
       // Sempre usar upload TUS
-      console.log('StreamUploader: Iniciando upload com TUS...');
-      console.log("StreamUploader: uploadUrl antes de chamar uploadWithTus:", uploadUrl);
-      await streamApi.uploadWithTus(file, uploadUrl, (progress, uploaded, total) => {
+      console.log("StreamUploader: Iniciando upload direto...");
+      console.log("StreamUploader: uploadUrl antes de chamar uploadDirect:", uploadUrl);
+      await streamApi.uploadDirect(file, uploadUrl, (progress, uploaded, total) => {
         setUploadProgress(progress);
         onUploadProgress?.(progress, uploaded, total);
         // console.log('StreamUploader: Progresso de upload TUS:', progress);

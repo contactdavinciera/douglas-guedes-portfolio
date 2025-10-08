@@ -1,4 +1,4 @@
-import * as tus from "tus-js-client";
+
 
 /**
  * Serviço para interagir com Cloudflare Stream API
@@ -62,40 +62,41 @@ class StreamApiService {
   }
 
   /**
-   * Upload usando TUS (Resumable Upload Protocol)
+   * Upload direto via HTTP POST (não TUS)
    */
-  async uploadWithTus(file, uploadUrl, onProgress) {
+  async uploadDirect(file, uploadUrl, onProgress) {
     return new Promise((resolve, reject) => {
-      const upload = new tus.Upload(file, {
-        endpoint: uploadUrl,
-        removeFingerprintOnSuccess: true,
-        uploadSize: file.size,
-        chunkSize: 5 * 1024 * 1024, // 5 MB por chunk
-        retryDelays: [0, 1000, 3000, 5000],
-
-        onError: (error) => {
-          console.error("❌ Erro TUS:", error);
-          reject(new Error(`Upload falhou: ${error.message || error}`));
-        },
-
-        onProgress: (bytesSent, bytesTotal) => {
-          const progress = Math.floor((bytesSent / bytesTotal) * 100);
-          if (onProgress) {
-            onProgress(progress, bytesSent, bytesTotal);
-          }
-        },
-
-        onSuccess: () => {
-          console.log("✅ Upload TUS concluído:", upload.url);
-          resolve({ 
-            success: true,
-            tusUrl: upload.url,
-            uploadedBytes: file.size
-          });
-        },
+      const xhr = new XMLHttpRequest();
+      
+      xhr.upload.addEventListener('progress', (e) => {
+        if (e.lengthComputable && onProgress) {
+          const progress = Math.floor((e.loaded / e.total) * 100);
+          onProgress(progress, e.loaded, e.total);
+        }
       });
 
-      upload.start();
+      xhr.addEventListener('load', () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          console.log("✅ Upload concluído com sucesso!");
+          resolve({ 
+            success: true,
+            response: JSON.parse(xhr.responseText)
+          });
+        } else {
+          reject(new Error(`Upload falhou com status ${xhr.status}`));
+        }
+      });
+
+      xhr.addEventListener('error', () => {
+        reject(new Error('Erro de rede durante o upload'));
+      });
+
+      xhr.addEventListener('abort', () => {
+        reject(new Error('Upload cancelado'));
+      });
+
+      xhr.open('POST', uploadUrl);
+      xhr.send(file);
     });
   }
 
