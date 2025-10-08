@@ -7,6 +7,7 @@ from werkzeug.utils import secure_filename
 from src.models.project import Project, db
 import subprocess
 import mimetypes
+import requests  # ← ADICIONADO
 
 color_studio_bp = Blueprint('color_studio', __name__)
 
@@ -353,3 +354,69 @@ def get_luts():
     }
     
     return jsonify({'luts': lut_library}), 200
+
+# ============================================
+# NOVO ENDPOINT PARA CLOUDFLARE STREAM
+# ============================================
+@color_studio_bp.route('/upload-url', methods=['POST'])
+def get_stream_upload_url():
+    """
+    Obtém URL de upload do Cloudflare Stream
+    """
+    try:
+        CLOUDFLARE_ACCOUNT_ID = os.getenv('CLOUDFLARE_ACCOUNT_ID')
+        CLOUDFLARE_API_TOKEN = os.getenv('CLOUDFLARE_API_TOKEN')
+        
+        # Validar credenciais
+        if not CLOUDFLARE_ACCOUNT_ID or not CLOUDFLARE_API_TOKEN:
+            return jsonify({
+                'success': False,
+                'error': 'Credenciais do Cloudflare não configuradas'
+            }), 500
+        
+        # Log para debug
+        print(f"🔑 Account ID: {CLOUDFLARE_ACCOUNT_ID[:8]}...")
+        
+        # Fazer requisição ao Cloudflare Stream
+        url = f'https://api.cloudflare.com/client/v4/accounts/{CLOUDFLARE_ACCOUNT_ID}/stream/direct_upload'
+        
+        headers = {
+            'Authorization': f'Bearer {CLOUDFLARE_API_TOKEN}',
+            'Content-Type': 'application/json'
+        }
+        
+        data = {
+            'maxDurationSeconds': 3600,
+            'requireSignedURLs': False
+        }
+        
+        print(f"📤 Fazendo requisição para: {url}")
+        
+        response = requests.post(url, headers=headers, json=data)
+        response_data = response.json()
+        
+        print(f"📥 Status: {response.status_code}")
+        print(f"📥 Response: {response_data}")
+        
+        if response.status_code == 200 and response_data.get('success'):
+            return jsonify({
+                'success': True,
+                'result': {
+                    'uploadURL': response_data['result']['uploadURL'],
+                    'uid': response_data['result']['uid']
+                }
+            }), 200
+        else:
+            return jsonify({
+                'success': False,
+                'error': response_data.get('errors', [{'message': 'Erro desconhecido'}])
+            }), response.status_code
+            
+    except Exception as e:
+        print(f"❌ Erro ao obter URL de upload: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
