@@ -47,7 +47,7 @@ class StreamApiService {
         .join(",");
 
       const response = await this.retryRequest(async () => {
-        const res = await fetch(`${this.baseUrl}/api/color-studio/get-upload-url`, {
+        const res = await fetch(`${this.baseUrl}/api/color-studio/upload-url`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
