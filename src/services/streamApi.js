@@ -70,12 +70,8 @@ class StreamApiService {
         endpoint: uploadUrl,
         removeFingerprintOnSuccess: true,
         uploadSize: file.size,
-        metadata: {
-          filename: file.name,
-          filetype: file.type || "application/octet-stream",
-        },
         chunkSize: 5 * 1024 * 1024, // 5 MB por chunk
-        retryDelays: [0, 1000, 3000, 5000, 10000],
+        retryDelays: [0, 1000, 3000, 5000],
 
         onError: (error) => {
           console.error("❌ Erro TUS:", error);
