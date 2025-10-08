@@ -6,7 +6,7 @@ import * as tus from "tus-js-client";
  */
 class StreamApiService {
   constructor() {
-    this.baseUrl = 
+    this.baseUrl = "https://color-studio-backend.onrender.com";
     this.frontendOrigin = "douglas-guedes-portfolio.pages.dev";
     this.maxRetries = 3;
     this.retryDelay = 1000; // 1 segundo
