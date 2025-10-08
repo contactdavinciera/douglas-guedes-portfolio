@@ -74,23 +74,14 @@ const StreamUploader = ({
       const uploadType = null; // Não retornado pelo direct_upload, definir como null ou remover se não for usado
       console.log('StreamUploader: URL de upload recebida. videoId:', videoId, 'uploadType:', uploadType);
 
-      // Fazer upload baseado no tipo
-      if (uploadType === 'basic') {
-        console.log('StreamUploader: Iniciando upload básico...');
-        await streamApi.uploadBasic(file, uploadUrl, (progress, uploaded, total) => {
-          setUploadProgress(progress);
-          onUploadProgress?.(progress, uploaded, total);
-          // console.log('StreamUploader: Progresso de upload básico:', progress);
-        });
-      } else {
-        console.log('StreamUploader: Iniciando upload com TUS...');
-        console.log("StreamUploader: uploadUrl antes de chamar uploadWithTus:", uploadUrl);
-        await streamApi.uploadWithTus(file, uploadUrl, (progress, uploaded, total) => {
-          setUploadProgress(progress);
-          onUploadProgress?.(progress, uploaded, total);
-          // console.log('StreamUploader: Progresso de upload TUS:', progress);
-        });
-      }
+      // Sempre usar upload TUS
+      console.log('StreamUploader: Iniciando upload com TUS...');
+      console.log("StreamUploader: uploadUrl antes de chamar uploadWithTus:", uploadUrl);
+      await streamApi.uploadWithTus(file, uploadUrl, (progress, uploaded, total) => {
+        setUploadProgress(progress);
+        onUploadProgress?.(progress, uploaded, total);
+        // console.log('StreamUploader: Progresso de upload TUS:', progress);
+      });
 
       // Aguardar processamento do vídeo
       setUploadProgress(100);
