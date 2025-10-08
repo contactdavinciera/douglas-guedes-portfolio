@@ -378,21 +378,16 @@ def get_stream_upload_url():
         print(f"🔑 Account ID: {CLOUDFLARE_ACCOUNT_ID[:8]}...")
         
         # Fazer requisição ao Cloudflare Stream
-        url = f'https://api.cloudflare.com/client/v4/accounts/{CLOUDFLARE_ACCOUNT_ID}/stream/direct_upload'
+        url = f'https://api.cloudflare.com/client/v4/accounts/{CLOUDFLARE_ACCOUNT_ID}/stream?direct_user=true'
         
         headers = {
             'Authorization': f'Bearer {CLOUDFLARE_API_TOKEN}',
-            'Content-Type': 'application/json'
         }
         
-        data = {
-            'maxDurationSeconds': 3600,
-            'requireSignedURLs': False
-        }
+        print(f"📤 Fazendo requisição TUS para: {url}")
         
-        print(f"📤 Fazendo requisição para: {url}")
-        
-        response = requests.post(url, headers=headers, json=data)
+        response = requests.post(url, headers=headers)
+
         response_data = response.json()
         
         print(f"📥 Status: {response.status_code}")

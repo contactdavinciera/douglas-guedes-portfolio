@@ -61,42 +61,43 @@ class StreamApiService {
     }
   }
 
-  /**
-   * Upload direto via HTTP POST (não TUS)
-   */
-  async uploadDirect(file, uploadUrl, onProgress) {
-    return new Promise((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
-      
-      xhr.upload.addEventListener('progress', (e) => {
-        if (e.lengthComputable && onProgress) {
-          const progress = Math.floor((e.loaded / e.total) * 100);
-          onProgress(progress, e.loaded, e.total);
-        }
-      });
+import * as tus from "tus-js-client";
 
-      xhr.addEventListener('load', () => {
-        if (xhr.status >= 200 && xhr.status < 300) {
-          console.log("✅ Upload concluído com sucesso!");
+  /**
+   * Upload usando TUS (Resumable Upload Protocol)
+   */
+  async uploadWithTus(file, uploadUrl, onProgress) {
+    return new Promise((resolve, reject) => {
+      const upload = new tus.Upload(file, {
+        endpoint: uploadUrl,
+        removeFingerprintOnSuccess: true,
+        uploadSize: file.size,
+        chunkSize: 5 * 1024 * 1024, // 5 MB por chunk
+        retryDelays: [0, 1000, 3000, 5000],
+
+        onError: (error) => {
+          console.error("❌ Erro TUS:", error);
+          reject(new Error(`Upload falhou: ${error.message || error}`));
+        },
+
+        onProgress: (bytesSent, bytesTotal) => {
+          const progress = Math.floor((bytesSent / bytesTotal) * 100);
+          if (onProgress) {
+            onProgress(progress, bytesSent, bytesTotal);
+          }
+        },
+
+        onSuccess: () => {
+          console.log("✅ Upload TUS concluído:", upload.url);
           resolve({ 
             success: true,
-            response: JSON.parse(xhr.responseText)
+            tusUrl: upload.url,
+            uploadedBytes: file.size
           });
-        } else {
-          reject(new Error(`Upload falhou com status ${xhr.status}`));
-        }
+        },
       });
 
-      xhr.addEventListener('error', () => {
-        reject(new Error('Erro de rede durante o upload'));
-      });
-
-      xhr.addEventListener('abort', () => {
-        reject(new Error('Upload cancelado'));
-      });
-
-      xhr.open('POST', uploadUrl);
-      xhr.send(file);
+      upload.start();
     });
   }
 
