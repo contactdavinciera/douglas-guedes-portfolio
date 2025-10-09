@@ -111,7 +111,14 @@ def stream_proxy_upload():
             return jsonify({"success": False, "error": "No file"}), 400
         
         file = request.files["file"]
-        file_size = request.content_length
+        
+        # Obter o tamanho do arquivo de forma mais robusta
+        file.seek(0, 2)  # Ir para o final do arquivo
+        file_size = file.tell()  # Obter a posição atual (tamanho)
+        file.seek(0)  # Voltar para o início
+        
+        if file_size == 0:
+            return jsonify({"success": False, "error": "Arquivo vazio"}), 400
         
         CLOUDFLARE_ACCOUNT_ID = os.getenv("CLOUDFLARE_ACCOUNT_ID")
         CLOUDFLARE_API_TOKEN = os.getenv("CLOUDFLARE_API_TOKEN")
@@ -124,17 +131,23 @@ def stream_proxy_upload():
         # 1. Criar sessão TUS
         tus_endpoint = f"https://api.cloudflare.com/client/v4/accounts/{CLOUDFLARE_ACCOUNT_ID}/stream"
         
+        # Codificar o nome do arquivo em base64 para o metadata
+        import base64
+        filename_b64 = base64.b64encode(file.filename.encode('utf-8')).decode('ascii')
+        
         headers = {
             "Authorization": f"Bearer {CLOUDFLARE_API_TOKEN}",
             "Tus-Resumable": "1.0.0",
             "Upload-Length": str(file_size),
-            "Upload-Metadata": f"name {file.filename}"
+            "Upload-Metadata": f"name {filename_b64}"
         }
         
         response = requests.post(tus_endpoint, headers=headers)
         
         if response.status_code != 201:
-            return jsonify({"success": False, "error": "Failed to create TUS session"}), 500
+            error_msg = response.text
+            print(f"❌ Erro ao criar sessão TUS: {response.status_code} - {error_msg}")
+            return jsonify({"success": False, "error": f"Failed to create TUS session: {error_msg}"}), 500
         
         upload_url = response.headers.get("Location")
         uid = response.headers.get("Stream-Media-Id", "unknown")
@@ -145,15 +158,20 @@ def stream_proxy_upload():
         print(f"✅ Sessão TUS criada: {upload_url}")
         
         # 2. Upload em chunks via TUS
-        chunk_size = 256 * 1024  # 256 KiB (requisito do Cloudflare Stream para TUS chunk size multiple)
+        # Usar chunk size menor para evitar problemas de memória
+        chunk_size = 64 * 1024  # 64 KiB
         
         offset = 0
         
-        # Resetar o ponteiro do arquivo para o início antes de ler os chunks
+        # Garantir que estamos no início do arquivo
         file.seek(0)
 
-        while True:
-            chunk = file.read(chunk_size)
+        while offset < file_size:
+            # Calcular o tamanho do chunk atual
+            remaining = file_size - offset
+            current_chunk_size = min(chunk_size, remaining)
+            
+            chunk = file.read(current_chunk_size)
             if not chunk:
                 break
             
@@ -166,12 +184,12 @@ def stream_proxy_upload():
             
             print(f"📦 Enviando chunk: offset={offset}, size={len(chunk)}")
             
-            response = requests.patch(upload_url, headers=headers, data=chunk)
+            response = requests.patch(upload_url, headers=headers, data=chunk, timeout=30)
             
             if response.status_code not in [200, 204]:
                 print(f"❌ Erro no chunk: {response.status_code}")
-                print(f"❌ Response: {response.text}")  # ← ADICIONE PARA VER O ERRO COMPLETO
-                return jsonify({"success": False, "error": f"Chunk upload failed: {response.text}"}), 500
+                print(f"❌ Response: {response.text}")
+                return jsonify({"success": False, "error": f"Chunk upload failed: {response.status_code} - {response.text}"}), 500
             
             offset += len(chunk)
             progress = int((offset / file_size) * 100)
