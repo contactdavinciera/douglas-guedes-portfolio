@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Maximize, Minimize, Volume2, VolumeX, Play, Pause, RotateCcw } from 'lucide-react';
+import { CORS_CONFIG, checkCORSIssues, generateOptimizedIframeUrl } from '../services/corsConfig';
 
 console.log('CloudflareStreamPlayer: Componente carregado');
 
@@ -29,24 +30,27 @@ const CloudflareStreamPlayer = ({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Gerar URL do iframe do Cloudflare Stream
+  // Gerar URL do iframe do Cloudflare Stream com configurações otimizadas
   const getStreamUrl = () => {
     console.log('CloudflareStreamPlayer: Gerando URL do Stream para videoId:', videoId);
-    if (!videoId || !customerCode) {
-      console.log('CloudflareStreamPlayer: videoId ou customerCode ausentes. Não é possível gerar URL.');
+    if (!videoId) {
+      console.log('CloudflareStreamPlayer: videoId ausente. Não é possível gerar URL.');
       return null;
     }
     
-    const params = new URLSearchParams({
+    // Usar customer code da configuração se não fornecido
+    const finalCustomerCode = customerCode || CORS_CONFIG.cloudflareStream.customerCode;
+    
+    const options = {
       autoplay: autoplay ? 'true' : 'false',
       controls: controls ? 'true' : 'false',
       muted: muted ? 'true' : 'false',
       loop: loop ? 'true' : 'false',
       primaryColor: primaryColor.replace('#', ''),
       letterboxColor: letterboxColor === 'transparent' ? 'transparent' : letterboxColor.replace('#', '')
-    });
+    };
 
-    const url = `https://customer-${customerCode}.cloudflarestream.com/${videoId}/iframe?${params.toString()}`;
+    const url = generateOptimizedIframeUrl(videoId, options);
     console.log('CloudflareStreamPlayer: URL do Stream gerada:', url);
     return url;
   };
@@ -72,10 +76,24 @@ const CloudflareStreamPlayer = ({
   // Inicializar o player quando o iframe carregar
   useEffect(() => {
     console.log('CloudflareStreamPlayer: useEffect acionado. videoId:', videoId, 'customerCode:', customerCode);
-    if (!videoId || !customerCode) {
-      console.log('CloudflareStreamPlayer: videoId ou customerCode ausentes no useEffect. Abortando inicialização.');
+    if (!videoId) {
+      console.log('CloudflareStreamPlayer: videoId ausente no useEffect. Abortando inicialização.');
       return;
     }
+
+    // Verificar problemas de CORS
+    const checkCORS = async () => {
+      try {
+        const corsCheck = await checkCORSIssues(videoId);
+        if (corsCheck.hasCORSIssue) {
+          console.warn('CloudflareStreamPlayer: Possível problema de CORS detectado:', corsCheck);
+        }
+      } catch (error) {
+        console.warn('CloudflareStreamPlayer: Erro ao verificar CORS:', error);
+      }
+    };
+
+    checkCORS();
 
     const initializePlayer = () => {
       console.log('CloudflareStreamPlayer: Tentando inicializar o player. window.Stream:', !!window.Stream, 'iframeRef.current:', !!iframeRef.current);
@@ -264,10 +282,11 @@ const CloudflareStreamPlayer = ({
       <iframe
         ref={iframeRef}
         src={getStreamUrl()}
-        className="w-full h-full"
+        className="w-full h-full video-content"
         style={{ border: 'none' }}
-        allow="accelerometer; gyroscope; autoplay; encrypted-in-picture;"
-        allowFullScreen
+        allow={CORS_CONFIG.cloudflareStream.iframeAttributes.allow}
+        allowFullScreen={CORS_CONFIG.cloudflareStream.iframeAttributes.allowFullScreen}
+        referrerPolicy={CORS_CONFIG.cloudflareStream.iframeAttributes.referrerPolicy}
         title="Cloudflare Stream Player"
       />
 
