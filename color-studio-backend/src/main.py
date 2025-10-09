@@ -47,18 +47,5 @@ def serve(path):
             return "index.html not found", 404
 
 
-@app.errorhandler(404)
-def not_found(e):
-    if request.path.startswith('/api'):
-        return jsonify(error="Not Found", message=str(e)), 404
-    return e, 404
-
-@app.errorhandler(500)
-def internal_server_error(e):
-    if request.path.startswith('/api'):
-        return jsonify(error="Internal Server Error", message=str(e)), 500
-    return e, 500
-
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5001, debug=True)
-
