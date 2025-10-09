@@ -77,7 +77,7 @@ const StreamUploader = ({
       // Sempre usar upload TUS
       console.log("StreamUploader: Iniciando upload com TUS...");
       console.log("StreamUploader: uploadUrl antes de chamar uploadWithTus:", uploadUrl);
-      await streamApi.uploadWithTus(file, uploadUrl, (progress, uploaded, total) => {
+      await streamApi.uploadLargeFile(file, (progress, uploaded, total) => {
         setUploadProgress(progress);
         onUploadProgress?.(progress, uploaded, total);
         // console.log('StreamUploader: Progresso de upload TUS:', progress);
