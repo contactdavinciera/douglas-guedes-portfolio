@@ -169,7 +169,8 @@ def stream_proxy_upload():
             
             if response.status_code not in [200, 204]:
                 print(f"❌ Erro no chunk: {response.status_code}")
-                return jsonify({"success": False, "error": "Chunk upload failed"}), 500
+                print(f"❌ Response: {response.text}")  # ← ADICIONE PARA VER O ERRO COMPLETO
+                return jsonify({"success": False, "error": f"Chunk upload failed: {response.text}"}), 500
             
             offset += len(chunk)
             progress = int((offset / file_size) * 100)
