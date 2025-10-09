@@ -30,30 +30,38 @@ class StreamApiService {
   /**
    * Obter URL de upload direto do Cloudflare Stream
    */
-async getUploadUrl(file) {
-  try {
-    console.log(`📤 Solicitando URL de upload para: ${file.name} (${file.size} bytes)`);
-    
-    const response = await fetch(`${this.baseUrl}/api/color-studio/upload-url`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        fileSize: file.size,
-        fileName: file.name
-      })
-    });
+  async getUploadUrl(file) {
+    try {
+      console.log(`📤 Solicitando URL de upload para: ${file.name} (${file.size} bytes)`);
+      
+      const response = await fetch(`${this.baseUrl}/api/color-studio/upload-url`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fileSize: file.size,
+          fileName: file.name
+        })
+      });
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error || `HTTP ${response.status}`);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}: Erro ao obter URL de upload`);
+      }
+
+      const data = await response.json();
+      
+      if (!data.uploadURL || !data.uid) {
+        throw new Error("Resposta inválida do backend para URL de upload");
+      }
+
+      console.log(`✅ URL de upload recebida: ${data.uploadURL}`);
+      return data;
+
+    } catch (error) {
+      console.error("❌ Erro ao obter URL de upload:", error);
+      throw new Error(`Falha ao obter URL de upload: ${error.message}`);
     }
-
-    return response.json();
-  } catch (error) {
-    console.error("❌ Erro ao obter URL de upload:", error);
-    throw error;
   }
-}
 
   /**
    * Upload usando TUS com a biblioteca oficial tus-js-client
