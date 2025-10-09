@@ -363,6 +363,3 @@ const StreamUploader = ({
 
 export default StreamUploader;
 
-
-// Correção de sintaxe para deploy do Cloudflare Pages
-
