@@ -19,6 +19,7 @@ const StreamUploader = ({
   const [uploadedFile, setUploadedFile] = useState(null);
   const [uploadError, setUploadError] = useState(null);
   const [videoMetadata, setVideoMetadata] = useState(null);
+  const [videoIdForPreview, setVideoIdForPreview] = useState(null);
   const fileInputRef = useRef(null);
   const uploadRef = useRef(null);
 
@@ -98,9 +99,13 @@ const StreamUploader = ({
         }
       };
       
-      setUploadState('success');
+      setUploadState("success");
       onUploadComplete?.(result);
-      console.log('StreamUploader: Upload bem-sucedido. Resultado:', result);
+      console.log("StreamUploader: Upload bem-sucedido. Resultado:", result);
+      setVideoMetadata(result.metadata);
+      setUploadedFile(result);
+      // Adicionar o videoId ao estado para ser usado pelo componente de preview
+      setVideoIdForPreview(result.videoId);
       
     } catch (error) {
       console.error('StreamUploader: Erro no upload:', error);
@@ -269,6 +274,20 @@ const StreamUploader = ({
           <Button onClick={resetUpload} variant="outline">
             Enviar Outro Arquivo
           </Button>
+        </div>
+      )}
+
+      {uploadState === 'success' && videoIdForPreview && (
+        <div className="mt-4">
+          <h3 className="text-lg font-semibold mb-2">Preview do Vídeo</h3>
+          <iframe
+            src={`https://customer-5dr3ub1goe3wg2wj.cloudflarestream.com/${videoIdForPreview}/iframe`}
+            style={{ border: 'none' }}
+            height="360"
+            width="640"
+            allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
+            allowFullScreen={true}
+          ></iframe>
         </div>
       )}
 
