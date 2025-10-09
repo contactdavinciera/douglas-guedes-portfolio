@@ -230,7 +230,7 @@ const StreamUploader = ({
 
           <div className="flex items-center space-x-2 text-sm text-gray-400">
             <Loader className="animate-spin" size={16} />
-            <span>Enviando para Cloudflare Stream...</span>
+            <span>Enviando para o Ateliê de Cores...</span>
           </div>
         </div>
       )}
