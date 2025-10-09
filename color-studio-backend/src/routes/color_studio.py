@@ -406,9 +406,9 @@ def get_stream_upload_url():
         print(f"📥 Response Headers: {dict(response.headers)}")
         
         if response.status_code == 201:  # Created
-            # TUS retorna a URL no header 'Location'
+            # TUS retorna a URL no header \'Location\'
             upload_url = response.headers.get("Location")
-            # UID no header 'Stream-Media-Id'
+            # UID no header \'Stream-Media-Id\'
             uid = response.headers.get("Stream-Media-Id", "unknown")
             
             if upload_url:
@@ -440,3 +440,67 @@ def get_stream_upload_url():
             "error": str(e)
         }), 500
 
+@color_studio_bp.route("/upload-chunk", methods=["PATCH"])
+def upload_chunk():
+    """
+    Proxy para enviar chunks TUS ao Cloudflare Stream
+    """
+    try:
+        # Pega a URL de upload do corpo da requisição
+        upload_url = request.headers.get("X-Upload-URL")
+        upload_offset = request.headers.get("Upload-Offset", "0")
+        
+        if not upload_url:
+            return jsonify({
+                "success": False,
+                "error": "X-Upload-URL header obrigatório"
+            }), 400
+        
+        # Pega o chunk do corpo
+        chunk_data = request.get_data()
+        
+        if not chunk_data:
+            return jsonify({
+                "success": False,
+                "error": "Chunk vazio"
+            }), 400
+        
+        print(f"📦 Proxy: Retransmitindo chunk offset={upload_offset}, size={len(chunk_data)}")
+        
+        CLOUDFLARE_API_TOKEN = os.getenv("CLOUDFLARE_API_TOKEN")
+        
+        # Headers TUS para o Cloudflare
+        headers = {
+            "Authorization": f"Bearer {CLOUDFLARE_API_TOKEN}",
+            "Content-Type": "application/offset+octet-stream",
+            "Upload-Offset": upload_offset,
+            "Tus-Resumable": "1.0.0"
+        }
+        
+        # Envia o chunk para o Cloudflare Stream
+        response = requests.patch(upload_url, headers=headers, data=chunk_data)
+        
+        print(f"📥 Cloudflare response: {response.status_code}")
+        
+        if response.status_code in [200, 204]:
+            # Retorna os headers importantes
+            return jsonify({
+                "success": True,
+                "offset": response.headers.get("Upload-Offset", upload_offset)
+            }), response.status_code
+        else:
+            error_msg = response.text
+            print(f"❌ Erro do Cloudflare: {error_msg}")
+            return jsonify({
+                "success": False,
+                "error": f"Cloudflare error {response.status_code}"
+            }), response.status_code
+            
+    except Exception as e:
+        print(f"❌ Erro no proxy: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500

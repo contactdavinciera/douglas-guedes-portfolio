@@ -30,84 +30,79 @@ class StreamApiService {
   /**
    * Obter URL de upload direto do Cloudflare Stream
    */
-  async getUploadUrl(file) {
-    try {
-      console.log(`📤 Solicitando URL de upload para: ${file.name} (${file.size} bytes)`);
-      
-      const response = await fetch(`${this.baseUrl}/api/color-studio/upload-url`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          fileSize: file.size,
-          fileName: file.name
-        })
-      });
+async getUploadUrl(file) {
+  try {
+    console.log(`📤 Solicitando URL de upload para: ${file.name} (${file.size} bytes)`);
+    
+    const response = await fetch(`${this.baseUrl}/api/color-studio/upload-url`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        fileSize: file.size,
+        fileName: file.name
+      })
+    });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `HTTP ${response.status}: Erro ao obter URL de upload`);
-      }
-
-      const data = await response.json();
-      
-      if (!data.uploadURL || !data.uid) {
-        throw new Error("Resposta inválida do backend para URL de upload");
-      }
-
-      console.log(`✅ URL de upload recebida: ${data.uploadURL}`);
-      return data;
-
-    } catch (error) {
-      console.error("❌ Erro ao obter URL de upload:", error);
-      throw new Error(`Falha ao obter URL de upload: ${error.message}`);
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `HTTP ${response.status}`);
     }
+
+    return response.json();
+  } catch (error) {
+    console.error("❌ Erro ao obter URL de upload:", error);
+    throw error;
   }
+}
 
   /**
    * Upload usando TUS com a biblioteca oficial tus-js-client
    */
-  async uploadWithTus(file, uploadUrl, onProgress) {
-    return new Promise((resolve, reject) => {
-      console.log(`📤 Iniciando upload TUS para: ${uploadUrl}`);
+/**
+ * Upload usando TUS com a biblioteca oficial tus-js-client
+ */
+async uploadWithTus(file, uploadUrl, onProgress) {
+  return new Promise((resolve, reject) => {
+    console.log(`📤 Iniciando upload TUS para: ${uploadUrl}`);
 
-      const upload = new tus.Upload(file, {
-        // USA A URL RETORNADA DIRETAMENTE (já é a Location do POST)
-        uploadUrl: uploadUrl,
-        
-        // Desabilita criação de nova sessão (já foi criada no backend)
-        resume: false,
-        
-        // Configurações TUS
-        retryDelays: [0, 3000, 5000, 10000, 20000],
-        chunkSize: 52428800, // 50 MB
-        
-        onError: (error) => {
-          console.error("❌ Erro TUS:", error);
-          reject(new Error(`Upload falhou: ${error.message}`));
-        },
+    const upload = new tus.Upload(file, {
+      // USA A URL RETORNADA DIRETAMENTE (já é a Location do POST)
+      uploadUrl: uploadUrl,
+      
+      // Desabilita criação de nova sessão (já foi criada no backend)
+      resume: false,
+      
+      // Configurações TUS
+      retryDelays: [0, 3000, 5000, 10000, 20000],
+      chunkSize: 52428800, // 50 MB
+      
+      onError: (error) => {
+        console.error("❌ Erro TUS:", error);
+        reject(new Error(`Upload falhou: ${error.message}`));
+      },
 
-        onProgress: (bytesUploaded, bytesTotal) => {
-          const percentage = Math.floor((bytesUploaded / bytesTotal) * 100);
-          console.log(`📊 Progresso: ${percentage}% (${bytesUploaded}/${bytesTotal})`);
-          
-          if (onProgress) {
-            onProgress(percentage, bytesUploaded, bytesTotal);
-          }
-        },
-
-        onSuccess: () => {
-          console.log("🎉 Upload TUS concluído com sucesso!");
-          resolve({
-            success: true,
-            uploadedBytes: file.size
-          });
+      onProgress: (bytesUploaded, bytesTotal) => {
+        const percentage = Math.floor((bytesUploaded / bytesTotal) * 100);
+        console.log(`📊 Progresso: ${percentage}% (${bytesUploaded}/${bytesTotal})`);
+        
+        if (onProgress) {
+          onProgress(percentage, bytesUploaded, bytesTotal);
         }
-      });
+      },
 
-      // Inicia o upload
-      upload.start();
+      onSuccess: () => {
+        console.log("🎉 Upload TUS concluído com sucesso!");
+        resolve({
+          success: true,
+          uploadedBytes: file.size
+        });
+      }
     });
-  }
+
+    // Inicia o upload
+    upload.start();
+  });
+}
 
   async getVideoStatus(videoId) {
     try {
