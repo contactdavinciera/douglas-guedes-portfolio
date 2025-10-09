@@ -17,7 +17,17 @@ from src.routes.color_studio import color_studio_bp
 from flask_cors import CORS
 
 app = Flask(__name__, static_folder=os.path.join(os.path.dirname(__file__), 'static'))
-CORS(app, resources={r"/api/*": {"origins": ["https://douglas-guedes-portfolio.pages.dev", "http://localhost:5173"]}})
+CORS(app, resources={
+    r"/api/*": {
+        "origins": [
+            "https://douglas-guedes-portfolio.pages.dev",
+            "http://localhost:5173",
+            "http://localhost:3000"
+        ],
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization"]
+    }
+})
 app.config['SECRET_KEY'] = 'asdf#FGSgvasgf$5$WGT'
 
 app.register_blueprint(user_bp, url_prefix='/api')
