@@ -229,3 +229,38 @@ def stream_proxy_upload():
         import traceback
         traceback.print_exc()
         return jsonify({"success": False, "error": str(e)}), 500
+
+
+
+@color_studio_bp.route("/video-status", methods=["GET"])
+def get_video_status():
+    """
+    Verifica o status de um vídeo no Cloudflare Stream
+    """
+    try:
+        video_id = request.args.get("videoId")
+        if not video_id:
+            return jsonify({"success": False, "error": "videoId é obrigatório"}), 400
+
+        CLOUDFLARE_ACCOUNT_ID = os.getenv("CLOUDFLARE_ACCOUNT_ID")
+        CLOUDFLARE_API_TOKEN = os.getenv("CLOUDFLARE_API_TOKEN")
+
+        if not CLOUDFLARE_ACCOUNT_ID or not CLOUDFLARE_API_TOKEN:
+            return jsonify({"success": False, "error": "Credenciais do Cloudflare não configuradas"}), 500
+
+        url = f"https://api.cloudflare.com/client/v4/accounts/{CLOUDFLARE_ACCOUNT_ID}/stream/{video_id}"
+        headers = {"Authorization": f"Bearer {CLOUDFLARE_API_TOKEN}"}
+
+        response = requests.get(url, headers=headers, timeout=15)
+
+        if response.status_code == 200:
+            return jsonify({"success": True, "cf": response.json()}), 200
+        else:
+            return jsonify({"success": False, "error": f"Erro ao obter status do vídeo: {response.status_code} - {response.text}"}), response.status_code
+
+    except Exception as e:
+        print(f"❌ Erro ao verificar status do vídeo: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"success": False, "error": str(e)}), 500
+
