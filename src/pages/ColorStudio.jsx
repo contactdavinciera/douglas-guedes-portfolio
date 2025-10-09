@@ -139,7 +139,7 @@ const ColorStudio = () => {
 
 
   const getVideoPlayerStyle = () => {
-    const baseClasses = 'w-full bg-gray-900 rounded-xl border border-gray-700 overflow-hidden transition-all duration-300';
+    const baseClasses = 'w-full bg-gray-900 rounded-xl border border-gray-700 overflow-hidden transition-all duration-300 cinema-frame';
     
     if (isFullscreen) {
       return `${baseClasses} h-screen max-w-none`;

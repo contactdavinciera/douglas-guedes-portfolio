@@ -121,6 +121,68 @@
   .section-container {
     @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24;
   }
+
+  /* Estilos para a moldura de cinema */
+  .cinema-frame {
+    position: relative;
+    overflow: hidden;
+    background-color: #1a1a1a; /* Cor de fundo escura para a moldura */
+    border-radius: 0.75rem; /* rounded-xl */
+    border: 1px solid #374151; /* border-gray-700 */
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* Sombra sutil */
+  }
+
+  .cinema-frame::before,
+  .cinema-frame::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 15%; /* Altura das barras pretas superior e inferior */
+    background-color: #000;
+    z-index: 10;
+  }
+
+  .cinema-frame::before {
+    top: 0;
+  }
+
+  .cinema-frame::after {
+    bottom: 0;
+  }
+
+  .cinema-frame .video-content {
+    position: relative;
+    z-index: 5;
+    height: 100%;
+    width: 100%;
+  }
+
+  .cinema-frame.aspect-video::before,
+  .cinema-frame.aspect-video::after {
+    height: 10%; /* Ajuste para 16:9 */
+  }
+
+  .cinema-frame.aspect-[21/9]::before,
+  .cinema-frame.aspect-[21/9]::after {
+    height: 5%; /* Ajuste para 21:9 */
+  }
+
+  .cinema-frame.aspect-[4/3]::before,
+  .cinema-frame.aspect-[4/3]::after {
+    height: 20%; /* Ajuste para 4:3 */
+  }
+
+  .cinema-frame.aspect-[9/16]::before,
+  .cinema-frame.aspect-[9/16]::after {
+    height: 30%; /* Ajuste para 9:16 */
+  }
+
+  .cinema-frame.aspect-square::before,
+  .cinema-frame.aspect-square::after {
+    height: 25%; /* Ajuste para 1:1 */
+  }
+
 }
 
 /* Enhanced animations */
