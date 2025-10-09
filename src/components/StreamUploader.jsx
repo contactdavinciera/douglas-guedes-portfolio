@@ -278,16 +278,51 @@ const StreamUploader = ({
       )}
 
       {uploadState === 'success' && videoIdForPreview && (
-        <div className="mt-4">
-          <h3 className="text-lg font-semibold mb-2">Preview do Vídeo</h3>
-          <iframe
-            src={`https://customer-5dr3ub1goe3wg2wj.cloudflarestream.com/${videoIdForPreview}/iframe`}
-            style={{ border: 'none' }}
-            height="360"
-            width="640"
-            allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
-            allowFullScreen={true}
-          ></iframe>
+        <div className="mt-8">
+          {/* Cinema Theater Container */}
+          <div className="relative bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900 rounded-2xl p-8 shadow-2xl">
+            {/* Theater Header */}
+            <div className="text-center mb-6">
+              <h3 className="text-2xl font-bold text-white mb-2">🎬 Sala de Projeção</h3>
+              <p className="text-gray-300 text-sm">Seu vídeo está pronto para ser assistido</p>
+            </div>
+
+            {/* Cinema Screen */}
+            <div className="relative bg-black rounded-lg p-4 shadow-inner">
+              {/* Screen Frame */}
+              <div className="relative bg-gray-900 rounded-lg overflow-hidden shadow-2xl border-4 border-gray-700">
+                {/* Video Player */}
+                <iframe
+                  src={`https://customer-5dr3ub1goe3wg2wj.cloudflarestream.com/${videoIdForPreview}/iframe`}
+                  style={{ border: 'none' }}
+                  className="w-full aspect-video"
+                  allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
+                  allowFullScreen={true}
+                ></iframe>
+              </div>
+              
+              {/* Screen Glow Effect */}
+              <div className="absolute inset-0 bg-blue-500/10 rounded-lg pointer-events-none"></div>
+            </div>
+
+            {/* Cinema Seats */}
+            <div className="mt-6 flex justify-center space-x-2">
+              {[...Array(8)].map((_, i) => (
+                <div key={i} className="flex flex-col items-center">
+                  {/* Seat */}
+                  <div className="w-6 h-6 bg-red-600 rounded-t-lg border-2 border-red-700 shadow-lg transform hover:scale-110 transition-transform duration-200"></div>
+                  {/* Seat Base */}
+                  <div className="w-8 h-2 bg-red-700 rounded-b-sm"></div>
+                </div>
+              ))}
+            </div>
+
+            {/* Theater Floor Pattern */}
+            <div className="mt-4 h-2 bg-gradient-to-r from-transparent via-red-900/30 to-transparent rounded-full"></div>
+            
+            {/* Ambient Lighting */}
+            <div className="absolute top-0 left-0 w-full h-full bg-gradient-radial from-transparent via-transparent to-black/20 rounded-2xl pointer-events-none"></div>
+          </div>
         </div>
       )}
 
