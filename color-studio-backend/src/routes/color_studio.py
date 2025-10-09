@@ -145,7 +145,8 @@ def stream_proxy_upload():
         print(f"✅ Sessão TUS criada: {upload_url}")
         
         # 2. Upload em chunks via TUS
-        chunk_size = 52428800  # 50 MB
+        chunk_size = 256 * 1024  # 256 KiB (requisito do Cloudflare Stream para TUS chunk size multiple)
+        
         offset = 0
         
         # Resetar o ponteiro do arquivo para o início antes de ler os chunks
