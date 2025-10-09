@@ -62,68 +62,55 @@ class StreamApiService {
     }
   }
 
-  /**
-   * Upload usando TUS com PATCH manual (sem biblioteca tus-js-client)
-   */
   async uploadWithTus(file, uploadUrl, onProgress) {
-    return new Promise((resolve, reject) => {
+    try {
       console.log(`📤 Iniciando upload TUS para: ${uploadUrl}`);
       
       let offset = 0;
-      const chunkSize = 52428800; // 50 MB (recomendado pela Cloudflare)
+      const chunkSize = 52428800; // 50 MB
 
-      const uploadChunk = () => {
+      while (offset < file.size) {
         const chunk = file.slice(offset, offset + chunkSize);
-        const xhr = new XMLHttpRequest();
         
-        xhr.open("PATCH", uploadUrl);
-        xhr.setRequestHeader("Content-Type", "application/offset+octet-stream");
-        xhr.setRequestHeader("Upload-Offset", offset.toString());
-        xhr.setRequestHeader("Tus-Resumable", "1.0.0");
-        xhr.withCredentials = false; // Não envia cookies
+        console.log(`📦 Enviando chunk: ${offset} - ${offset + chunk.size}`);
 
-        xhr.upload.onprogress = (e) => {
-          if (e.lengthComputable && onProgress) {
-            const totalUploaded = offset + e.loaded;
-            const progress = Math.floor((totalUploaded / file.size) * 100);
-            console.log(`📊 Progresso: ${progress}% (${totalUploaded}/${file.size} bytes)`);
-            onProgress(progress, totalUploaded, file.size);
+        try {
+          await fetch(uploadUrl, {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/offset+octet-stream',
+              'Upload-Offset': offset.toString(),
+              'Tus-Resumable': '1.0.0'
+            },
+            body: chunk,
+            mode: 'no-cors'  // Ignora CORS
+          });
+
+          offset += chunk.size;
+          const progress = Math.floor((offset / file.size) * 100);
+          
+          console.log(`✅ Chunk enviado! ${progress}% (${offset}/${file.size})`);
+          
+          if (onProgress) {
+            onProgress(progress, offset, file.size);
           }
-        };
 
-        xhr.onload = () => {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            offset += chunk.size;
-            console.log(`✅ Chunk enviado! Offset: ${offset}/${file.size}`);
-            
-            if (offset < file.size) {
-              // Ainda tem mais chunks
-              uploadChunk();
-            } else {
-              console.log("✅ Upload TUS concluído!");
-              resolve({ 
-                success: true,
-                uploadedBytes: file.size
-              });
-            }
-          } else {
-            reject(new Error(`Upload falhou com status ${xhr.status}`));
-          }
-        };
+          // Pequeno delay entre chunks
+          await new Promise(resolve => setTimeout(resolve, 100));
 
-        xhr.onerror = () => {
-          reject(new Error("Erro de rede durante o upload"));
-        };
+        } catch (chunkError) {
+          console.error(`❌ Erro no chunk ${offset}:`, chunkError);
+          throw chunkError;
+        }
+      }
 
-        xhr.onabort = () => {
-          reject(new Error("Upload cancelado"));
-        };
+      console.log("🎉 Upload completo!");
+      return { success: true, uploadedBytes: file.size };
 
-        xhr.send(chunk);
-      };
-
-      uploadChunk();
-    });
+    } catch (error) {
+      console.error("❌ Erro durante upload:", error);
+      throw error;
+    }
   }
 
   async getVideoStatus(videoId) {
