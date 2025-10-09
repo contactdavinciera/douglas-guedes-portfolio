@@ -46,13 +46,30 @@ async uploadLargeFile(file, onProgress) {
       };
 
       xhr.onload = () => {
+        console.log("StreamApiService: xhr.onload - Status:", xhr.status);
+        console.log("StreamApiService: xhr.onload - ResponseText:", xhr.responseText);
         if (xhr.status >= 200 && xhr.status < 300) {
-          const result = JSON.parse(xhr.responseText);
-          console.log("✅ Upload completo!", result);
-          resolve(result);
+          try {
+            const result = JSON.parse(xhr.responseText);
+            console.log("✅ Upload completo!", result);
+            resolve(result);
+          } catch (e) {
+            console.error("StreamApiService: Erro ao parsear JSON da resposta:", e);
+            reject(new Error(`Upload bem-sucedido, mas resposta inválida: ${xhr.responseText}`));
+          }
         } else {
-          reject(new Error(`Upload failed: ${xhr.status}`));
+          reject(new Error(`Upload failed: ${xhr.status} - ${xhr.responseText}`));
         }
+      };
+
+      xhr.onerror = () => {
+        console.error("StreamApiService: xhr.onerror - Network error");
+        reject(new Error("Network error"));
+      };
+
+      xhr.onabort = () => {
+        console.warn("StreamApiService: xhr.onabort - Upload aborted");
+        reject(new Error("Upload aborted"));
       };
 
       xhr.onerror = () => reject(new Error("Network error"));
@@ -67,22 +84,38 @@ async uploadLargeFile(file, onProgress) {
 }
 
   async getVideoStatus(videoId) {
+    console.log(`StreamApiService: Verificando status do vídeo ${videoId}...`);
     try {
       const response = await this.retryRequest(async () => {
         const res = await fetch(
-          `${this.baseUrl}/api/stream/video-status?videoId=${videoId}`,
+          `${this.baseUrl}/api/color-studio/video-status?videoId=${videoId}`,
           { method: "GET", headers: { "Content-Type": "application/json" } }
         );
 
+        console.log(`StreamApiService: Status da requisição GET /api/color-studio/video-status: ${res.status}`);
+        const responseText = await res.text();
+        console.log(`StreamApiService: Resposta da requisição GET /api/color-studio/video-status: ${responseText}`);
+
         if (!res.ok) {
-          const errorData = await res.json().catch(() => ({}));
-          throw new Error(errorData.error || `HTTP ${res.status}`);
+          let errorMsg = `Erro ao obter status do vídeo: ${res.status} ${res.statusText}`;
+          try {
+            const errorData = JSON.parse(responseText);
+            errorMsg = errorData.error || errorMsg;
+          } catch (e) {
+            // Não foi JSON, usar o texto bruto
+          }
+          throw new Error(errorMsg);
         }
 
-        return res.json();
+        try {
+          return JSON.parse(responseText);
+        } catch (e) {
+          console.error("StreamApiService: Erro ao parsear JSON da resposta de status:", e);
+          throw new Error(`Resposta de status inválida: ${responseText}`);
+        }
       });
 
-      if (!response.cf?.result) {
+      if (!response.success || !response.cf?.result) {
         throw new Error("Resposta inválida ao verificar status");
       }
 
