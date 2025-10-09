@@ -178,10 +178,15 @@ def stream_proxy_upload():
         files = {"file": (file.filename, file, file.content_type)}
         
         print(f"📦 Enviando arquivo para Cloudflare Stream...")
+        print(f"URL de destino do upload: {upload_url}")
+        print(f"Tamanho do arquivo a ser enviado: {file_size} bytes")
         
         try:
             upload_response = requests.post(upload_url, files=files, timeout=300)  # 5 minutos de timeout
             
+            print(f"Status do upload para Cloudflare Stream: {upload_response.status_code}")
+            print(f"Resposta do Cloudflare Stream: {upload_response.text}")
+
             if upload_response.status_code not in [200, 201]:
                 print(f"❌ Erro no upload: {upload_response.status_code}")
                 print(f"❌ Response: {upload_response.text}")
