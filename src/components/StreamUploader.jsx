@@ -99,13 +99,15 @@ const StreamUploader = ({
         }
       };
       
+      // Definir o videoId para preview ANTES de mudar o uploadState para 'success'
+      setVideoIdForPreview(result.videoId);
+      setVideoMetadata(result.metadata);
+      setUploadedFile(result);
+      
+      // Só depois definir o estado como 'success' para garantir que a renderização condicional funcione
       setUploadState("success");
       onUploadComplete?.(result);
       console.log("StreamUploader: Upload bem-sucedido. Resultado:", result);
-      setVideoMetadata(result.metadata);
-      setUploadedFile(result);
-      // Adicionar o videoId ao estado para ser usado pelo componente de preview
-      setVideoIdForPreview(result.videoId);
       
     } catch (error) {
       console.error('StreamUploader: Erro no upload:', error);
