@@ -7,7 +7,7 @@ from werkzeug.utils import secure_filename
 from src.models.project import Project, db
 import subprocess
 import mimetypes
-import requests  # ← ADICIONADO
+import requests
 
 color_studio_bp = Blueprint("color_studio", __name__)
 

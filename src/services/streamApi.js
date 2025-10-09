@@ -30,35 +30,26 @@ class StreamApiService {
   /**
    * Obter URL de upload direto do Cloudflare Stream
    */
-  async getUploadUrl(file, maxDurationSeconds = 3600) {
+  async getUploadUrl(file) {
     try {
-      const response = await this.retryRequest(async () => {
-        const res = await fetch(`${this.baseUrl}/api/color-studio/upload-url`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            fileSize: file.size,
-            fileName: file.name
-          })
-        });
-
-        if (!res.ok) {
-          const errorData = await res.json().catch(() => ({}));
-          throw new Error(errorData.error || `HTTP ${res.status}: Erro ao obter URL de upload`);
-        }
-
-        return res.json();
+      const response = await fetch(`${this.baseUrl}/api/color-studio/upload-url`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fileSize: file.size,
+          fileName: file.name
+        })
       });
 
-      if (!response.uploadURL || !response.uid) {
-        throw new Error("Resposta inválida do backend");
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP ${response.status}`);
       }
 
-      return response;
-
+      return response.json();
     } catch (error) {
-      console.error("❌ Erro ao obter URL de upload:", error);
-      throw new Error(`Falha ao obter URL de upload: ${error.message}`);
+      console.error("❌ Erro ao obter URL:", error);
+      throw error;
     }
   }
 
@@ -70,15 +61,15 @@ class StreamApiService {
   async uploadWithTus(file, uploadUrl, onProgress) {
     return new Promise((resolve, reject) => {
       const upload = new tus.Upload(file, {
-        endpoint: uploadUrl,
+        endpoint: uploadUrl, // USA A URL COMPLETA, NÃO O ENDPOINT
+        uploadUrl: uploadUrl, // Força usar a URL específica
+        retryDelays: [0, 3000, 5000, 10000, 20000],
+        chunkSize: 52428800, // 50 MB (recomendado pela Cloudflare)
         removeFingerprintOnSuccess: true,
-        uploadSize: file.size,
-        chunkSize: 5 * 1024 * 1024, // 5 MB por chunk
-        retryDelays: [0, 1000, 3000, 5000],
 
         onError: (error) => {
           console.error("❌ Erro TUS:", error);
-          reject(new Error(`Upload falhou: ${error.message || error}`));
+          reject(new Error(`Upload falhou: ${error.message}`));
         },
 
         onProgress: (bytesSent, bytesTotal) => {
@@ -89,10 +80,9 @@ class StreamApiService {
         },
 
         onSuccess: () => {
-          console.log("✅ Upload TUS concluído:", upload.url);
+          console.log("✅ Upload TUS concluído!");
           resolve({ 
             success: true,
-            tusUrl: upload.url,
             uploadedBytes: file.size
           });
         },
