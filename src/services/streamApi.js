@@ -80,6 +80,7 @@ class StreamApiService {
         xhr.setRequestHeader("Content-Type", "application/offset+octet-stream");
         xhr.setRequestHeader("Upload-Offset", offset.toString());
         xhr.setRequestHeader("Tus-Resumable", "1.0.0");
+        xhr.withCredentials = false; // Não envia cookies
 
         xhr.upload.onprogress = (e) => {
           if (e.lengthComputable && onProgress) {
