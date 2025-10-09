@@ -246,8 +246,7 @@ const CloudflareStreamPlayer = ({
       </div>
     );
   }
-
-  console.log('CloudflareStreamPlayer: Renderizando player com iframe. isLoading:', isLoading);
+  console.log(\'CloudflareStreamPlayer: Renderizando player com iframe. isLoading:\', isLoading);
   return (
     <div className={`${getAspectRatioClasses()} ${className} relative group bg-gray-900 rounded-xl overflow-hidden border border-gray-700`}>
       {/* Loading overlay */}
