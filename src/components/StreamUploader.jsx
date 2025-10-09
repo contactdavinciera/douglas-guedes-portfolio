@@ -90,6 +90,7 @@ const StreamUploader = ({
       
       const result = {
         videoId,
+        customerCode: "5dr3ublgoe3wg2wj", // Adicionado o customerCode
         uploadUrl: processedVideo.streamUrl || processedVideo.playback?.hls,
         metadata: {
           ...metadata,
