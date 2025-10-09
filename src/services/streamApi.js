@@ -1,4 +1,3 @@
-import * as tus from "tus-js-client";
 
 /**
  * Serviço para interagir com Cloudflare Stream API
@@ -32,6 +31,8 @@ class StreamApiService {
    */
   async getUploadUrl(file) {
     try {
+      console.log(`📤 Solicitando URL de upload para: ${file.name} (${file.size} bytes)`);
+      
       const response = await fetch(`${this.baseUrl}/api/color-studio/upload-url`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -43,58 +44,87 @@ class StreamApiService {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `HTTP ${response.status}`);
+        throw new Error(errorData.error || `HTTP ${response.status}: Erro ao obter URL de upload`);
       }
 
-      return response.json();
+      const data = await response.json();
+      
+      if (!data.uploadURL || !data.uid) {
+        throw new Error("Resposta inválida do backend para URL de upload");
+      }
+
+      console.log(`✅ URL de upload recebida: ${data.uploadURL}`);
+      return data;
+
     } catch (error) {
-      console.error("❌ Erro ao obter URL:", error);
-      throw error;
+      console.error("❌ Erro ao obter URL de upload:", error);
+      throw new Error(`Falha ao obter URL de upload: ${error.message}`);
     }
   }
 
-
-
   /**
-   * Upload usando TUS (Resumable Upload Protocol)
+   * Upload usando TUS com PATCH manual (sem biblioteca tus-js-client)
    */
   async uploadWithTus(file, uploadUrl, onProgress) {
     return new Promise((resolve, reject) => {
-      const upload = new tus.Upload(file, {
-        endpoint: uploadUrl, // USA A URL COMPLETA, NÃO O ENDPOINT
-        uploadUrl: uploadUrl, // Força usar a URL específica
-        retryDelays: [0, 3000, 5000, 10000, 20000],
-        chunkSize: 52428800, // 50 MB (recomendado pela Cloudflare)
-        removeFingerprintOnSuccess: true,
+      console.log(`📤 Iniciando upload TUS para: ${uploadUrl}`);
+      
+      let offset = 0;
+      const chunkSize = 52428800; // 50 MB (recomendado pela Cloudflare)
 
-        onError: (error) => {
-          console.error("❌ Erro TUS:", error);
-          reject(new Error(`Upload falhou: ${error.message}`));
-        },
+      const uploadChunk = () => {
+        const chunk = file.slice(offset, offset + chunkSize);
+        const xhr = new XMLHttpRequest();
+        
+        xhr.open("PATCH", uploadUrl);
+        xhr.setRequestHeader("Content-Type", "application/offset+octet-stream");
+        xhr.setRequestHeader("Upload-Offset", offset.toString());
+        xhr.setRequestHeader("Tus-Resumable", "1.0.0");
 
-        onProgress: (bytesSent, bytesTotal) => {
-          const progress = Math.floor((bytesSent / bytesTotal) * 100);
-          if (onProgress) {
-            onProgress(progress, bytesSent, bytesTotal);
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable && onProgress) {
+            const totalUploaded = offset + e.loaded;
+            const progress = Math.floor((totalUploaded / file.size) * 100);
+            console.log(`📊 Progresso: ${progress}% (${totalUploaded}/${file.size} bytes)`);
+            onProgress(progress, totalUploaded, file.size);
           }
-        },
+        };
 
-        onSuccess: () => {
-          console.log("✅ Upload TUS concluído!");
-          resolve({ 
-            success: true,
-            uploadedBytes: file.size
-          });
-        },
-      });
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            offset += chunk.size;
+            console.log(`✅ Chunk enviado! Offset: ${offset}/${file.size}`);
+            
+            if (offset < file.size) {
+              // Ainda tem mais chunks
+              uploadChunk();
+            } else {
+              console.log("✅ Upload TUS concluído!");
+              resolve({ 
+                success: true,
+                uploadedBytes: file.size
+              });
+            }
+          } else {
+            reject(new Error(`Upload falhou com status ${xhr.status}`));
+          }
+        };
 
-      upload.start();
+        xhr.onerror = () => {
+          reject(new Error("Erro de rede durante o upload"));
+        };
+
+        xhr.onabort = () => {
+          reject(new Error("Upload cancelado"));
+        };
+
+        xhr.send(chunk);
+      };
+
+      uploadChunk();
     });
   }
 
-  /**
-   * Verificar status do vídeo
-   */
   async getVideoStatus(videoId) {
     try {
       const response = await this.retryRequest(async () => {
@@ -287,3 +317,4 @@ class StreamApiService {
 // Exportar instância singleton
 const streamApi = new StreamApiService();
 export default streamApi;
+

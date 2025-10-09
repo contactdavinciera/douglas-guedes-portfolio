@@ -358,78 +358,85 @@ def get_luts():
 # ============================================
 # NOVO ENDPOINT PARA CLOUDFLARE STREAM
 # ============================================
-@color_studio_bp.route('/upload-url', methods=['POST'])
+@color_studio_bp.route("/upload-url", methods=["POST"])
 def get_stream_upload_url():
     """
-    Obtém URL de upload do Cloudflare Stream via TUS
+    Cria sessão TUS para upload de vídeos grandes no Cloudflare Stream
     """
     try:
         data = request.get_json() or {}
-        file_size = data.get('fileSize', 0)
-        file_name = data.get('fileName', 'video.mp4')
+        file_size = data.get("fileSize", 0)
+        file_name = data.get("fileName", "video.mp4")
         
         if not file_size or file_size <= 0:
             return jsonify({
-                'success': False,
-                'error': 'Tamanho do arquivo é obrigatório'
+                "success": False,
+                "error": "Tamanho do arquivo é obrigatório"
             }), 400
         
-        CLOUDFLARE_ACCOUNT_ID = os.getenv('CLOUDFLARE_ACCOUNT_ID')
-        CLOUDFLARE_API_TOKEN = os.getenv('CLOUDFLARE_API_TOKEN')
+        CLOUDFLARE_ACCOUNT_ID = os.getenv("CLOUDFLARE_ACCOUNT_ID")
+        CLOUDFLARE_API_TOKEN = os.getenv("CLOUDFLARE_API_TOKEN")
         
         if not CLOUDFLARE_ACCOUNT_ID or not CLOUDFLARE_API_TOKEN:
             return jsonify({
-                'success': False,
-                'error': 'Credenciais do Cloudflare não configuradas'
+                "success": False,
+                "error": "Credenciais do Cloudflare não configuradas"
             }), 500
         
         print(f"🔑 Account ID: {CLOUDFLARE_ACCOUNT_ID[:8]}...")
-        print(f"📦 File size: {file_size} bytes")
+        print(f"📦 File: {file_name} ({file_size} bytes)")
         
-        url = f'https://api.cloudflare.com/client/v4/accounts/{CLOUDFLARE_ACCOUNT_ID}/stream'
+        # Endpoint TUS do Cloudflare Stream
+        tus_endpoint = f"https://api.cloudflare.com/client/v4/accounts/{CLOUDFLARE_ACCOUNT_ID}/stream"
         
+        # Headers TUS obrigatórios
         headers = {
-            'Authorization': f'Bearer {CLOUDFLARE_API_TOKEN}',
-            'Tus-Resumable': '1.0.0',
-            'Upload-Length': str(file_size),
-            'Upload-Metadata': f'name {file_name}'
+            "Authorization": f"Bearer {CLOUDFLARE_API_TOKEN}",
+            "Tus-Resumable": "1.0.0",
+            "Upload-Length": str(file_size),
+            "Upload-Metadata": f"name {file_name}"
         }
         
-        print(f"📤 Criando sessão TUS em: {url}")
+        print(f"📤 POST TUS: {tus_endpoint}")
         
-        response = requests.post(url, headers=headers)
+        # Criar sessão TUS (POST vazio)
+        response = requests.post(tus_endpoint, headers=headers)
         
         print(f"📥 Status: {response.status_code}")
+        print(f"📥 Response Headers: {dict(response.headers)}")
         
-        if response.status_code in [200, 201]:
-            upload_url = response.headers.get('Location')
-            uid = response.headers.get('Stream-Media-Id', 'unknown')
+        if response.status_code == 201:  # Created
+            # TUS retorna a URL no header 'Location'
+            upload_url = response.headers.get("Location")
+            # UID no header 'Stream-Media-Id'
+            uid = response.headers.get("Stream-Media-Id", "unknown")
             
             if upload_url:
-                print(f"✅ Upload URL obtida: {upload_url}")
+                print(f"✅ Sessão TUS criada! URL: {upload_url}")
                 return jsonify({
-                    'success': True,
-                    'uploadURL': upload_url,
-                    'uid': uid
+                    "success": True,
+                    "uploadURL": upload_url,
+                    "uid": uid
                 }), 200
             else:
                 return jsonify({
-                    'success': False,
-                    'error': 'URL de upload não retornada'
+                    "success": False,
+                    "error": "Location header não retornado pelo Cloudflare"
                 }), 500
         else:
             error_msg = response.text
             print(f"❌ Erro: {error_msg}")
             return jsonify({
-                'success': False,
-                'error': f'Erro {response.status_code}: {error_msg}'
+                "success": False,
+                "error": f"Erro {response.status_code}: {error_msg}"
             }), response.status_code
             
     except Exception as e:
-        print(f"❌ Erro: {str(e)}")
+        print(f"❌ Erro ao criar sessão TUS: {str(e)}")
         import traceback
         traceback.print_exc()
         return jsonify({
-            'success': False,
-            'error': str(e)
+            "success": False,
+            "error": str(e)
         }), 500
+
