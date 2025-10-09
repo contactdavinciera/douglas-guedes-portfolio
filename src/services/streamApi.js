@@ -32,7 +32,7 @@ async uploadLargeFile(file, onProgress) {
     console.log(`📤 Enviando arquivo grande: ${file.name} (${file.size} bytes)`);
     
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append("file", file);
 
     const xhr = new XMLHttpRequest();
 
@@ -55,9 +55,9 @@ async uploadLargeFile(file, onProgress) {
         }
       };
 
-      xhr.onerror = () => reject(new Error('Network error'));
+      xhr.onerror = () => reject(new Error("Network error"));
 
-      xhr.open('POST', `${this.baseUrl}/api/color-studio/stream-proxy`);
+      xhr.open("POST", `${this.baseUrl}/api/color-studio/stream-proxy`);
       xhr.send(formData);
     });
   } catch (error) {

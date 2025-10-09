@@ -66,18 +66,9 @@ const StreamUploader = ({
 
       // Obter URL de upload do backend
       console.log('StreamUploader: Solicitando URL de upload...');
-      const uploadResponse = await streamApi.getUploadUrl(file, maxDurationSeconds);
-      const { uploadURL, uid } = uploadResponse;
-      const uploadUrl = uploadURL; // Renomear para uploadUrl para consistência
-      const videoId = uid; // Renomear uid para videoId para consistência
-      const customerCode = null; // Não retornado pelo direct_upload, definir como null ou remover se não for usado
-      const uploadType = null; // Não retornado pelo direct_upload, definir como null ou remover se não for usado
-      console.log('StreamUploader: URL de upload recebida. videoId:', videoId, 'uploadType:', uploadType);
-
-      // Sempre usar upload TUS
-      console.log("StreamUploader: Iniciando upload com TUS...");
-      console.log("StreamUploader: uploadUrl antes de chamar uploadWithTus:", uploadUrl);
-      await streamApi.uploadLargeFile(file, (progress, uploaded, total) => {
+      // Usar a nova função de upload de arquivo grande
+      console.log("StreamUploader: Iniciando upload de arquivo grande via proxy...");
+      const uploadResult = await streamApi.uploadLargeFile(file, (progress, uploaded, total) => {
         setUploadProgress(progress);
         onUploadProgress?.(progress, uploaded, total);
         // console.log('StreamUploader: Progresso de upload TUS:', progress);
