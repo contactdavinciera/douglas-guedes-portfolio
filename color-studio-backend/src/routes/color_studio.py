@@ -225,7 +225,7 @@ def stream_proxy_upload():
         }), 200
         
     except Exception as e:
-        print(f"❌ Erro: {str(e)}")
+        print(f"❌ Erro inesperado na rota /stream-proxy: {str(e)}")
         import traceback
         traceback.print_exc()
-        return jsonify({"success": False, "error": str(e)}), 500
+        return jsonify({"success": False, "error": f"Erro interno do servidor: {str(e)}"}), 500
