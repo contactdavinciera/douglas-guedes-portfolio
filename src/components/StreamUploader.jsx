@@ -254,7 +254,7 @@ const StreamUploader = ({
               <div className="relative bg-gray-900 rounded-lg overflow-hidden shadow-2xl border-4 border-gray-700">
                 {/* Video Player */}
                 <iframe
-                  src={`https://customer-5dr3ub1goe3wg2wj.cloudflarestream.com/${videoIdForPreview}/iframe`}
+                  src={`https://customer-5dr3ublgoe3wg2wj.cloudflarestream.com/${videoIdForPreview}/iframe`}
                   style={{ border: 'none' }}
                   className="w-full aspect-video"
                   allow="accelerometer; gyroscope; autoplay; encrypted-in-picture;"
