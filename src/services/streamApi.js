@@ -1,3 +1,4 @@
+import * as tus from "tus-js-client";
 
 /**
  * Serviço para interagir com Cloudflare Stream API
@@ -62,55 +63,50 @@ class StreamApiService {
     }
   }
 
+  /**
+   * Upload usando TUS com a biblioteca oficial tus-js-client
+   */
   async uploadWithTus(file, uploadUrl, onProgress) {
-    try {
+    return new Promise((resolve, reject) => {
       console.log(`📤 Iniciando upload TUS para: ${uploadUrl}`);
-      
-      let offset = 0;
-      const chunkSize = 52428800; // 50 MB
 
-      while (offset < file.size) {
-        const chunk = file.slice(offset, offset + chunkSize);
+      const upload = new tus.Upload(file, {
+        // USA A URL RETORNADA DIRETAMENTE (já é a Location do POST)
+        uploadUrl: uploadUrl,
         
-        console.log(`📦 Enviando chunk: ${offset} - ${offset + chunk.size}`);
+        // Desabilita criação de nova sessão (já foi criada no backend)
+        resume: false,
+        
+        // Configurações TUS
+        retryDelays: [0, 3000, 5000, 10000, 20000],
+        chunkSize: 52428800, // 50 MB
+        
+        onError: (error) => {
+          console.error("❌ Erro TUS:", error);
+          reject(new Error(`Upload falhou: ${error.message}`));
+        },
 
-        try {
-          await fetch(uploadUrl, {
-            method: 'PATCH',
-            headers: {
-              'Content-Type': 'application/offset+octet-stream',
-              'Upload-Offset': offset.toString(),
-              'Tus-Resumable': '1.0.0'
-            },
-            body: chunk,
-            mode: 'no-cors'  // Ignora CORS
-          });
-
-          offset += chunk.size;
-          const progress = Math.floor((offset / file.size) * 100);
-          
-          console.log(`✅ Chunk enviado! ${progress}% (${offset}/${file.size})`);
+        onProgress: (bytesUploaded, bytesTotal) => {
+          const percentage = Math.floor((bytesUploaded / bytesTotal) * 100);
+          console.log(`📊 Progresso: ${percentage}% (${bytesUploaded}/${bytesTotal})`);
           
           if (onProgress) {
-            onProgress(progress, offset, file.size);
+            onProgress(percentage, bytesUploaded, bytesTotal);
           }
+        },
 
-          // Pequeno delay entre chunks
-          await new Promise(resolve => setTimeout(resolve, 100));
-
-        } catch (chunkError) {
-          console.error(`❌ Erro no chunk ${offset}:`, chunkError);
-          throw chunkError;
+        onSuccess: () => {
+          console.log("🎉 Upload TUS concluído com sucesso!");
+          resolve({
+            success: true,
+            uploadedBytes: file.size
+          });
         }
-      }
+      });
 
-      console.log("🎉 Upload completo!");
-      return { success: true, uploadedBytes: file.size };
-
-    } catch (error) {
-      console.error("❌ Erro durante upload:", error);
-      throw error;
-    }
+      // Inicia o upload
+      upload.start();
+    });
   }
 
   async getVideoStatus(videoId) {
