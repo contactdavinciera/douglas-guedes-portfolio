@@ -1,4 +1,4 @@
-import * as tus from "tus-js-client";
+
 
 /**
  * Serviço para interagir com Cloudflare Stream API
@@ -63,53 +63,61 @@ class StreamApiService {
     }
   }
 
-  /**
-   * Upload usando TUS com a biblioteca oficial tus-js-client
-   */
 /**
- * Upload usando TUS com a biblioteca oficial tus-js-client
+ * Upload TUS via backend proxy (resolve CORS)
  */
 async uploadWithTus(file, uploadUrl, onProgress) {
-  return new Promise((resolve, reject) => {
-    console.log(`📤 Iniciando upload TUS para: ${uploadUrl}`);
+  try {
+    console.log(`📤 Iniciando upload via proxy para: ${uploadUrl}`);
+    
+    let offset = 0;
+    const chunkSize = 52428800; // 50 MB
 
-    const upload = new tus.Upload(file, {
-      // USA A URL RETORNADA DIRETAMENTE (já é a Location do POST)
-      uploadUrl: uploadUrl,
+    while (offset < file.size) {
+      const chunk = file.slice(offset, offset + chunkSize);
       
-      // Desabilita criação de nova sessão (já foi criada no backend)
-      resume: false,
-      
-      // Configurações TUS
-      retryDelays: [0, 3000, 5000, 10000, 20000],
-      chunkSize: 52428800, // 50 MB
-      
-      onError: (error) => {
-        console.error("❌ Erro TUS:", error);
-        reject(new Error(`Upload falhou: ${error.message}`));
-      },
+      console.log(`📦 Enviando chunk via proxy: ${offset} - ${offset + chunk.size}`);
 
-      onProgress: (bytesUploaded, bytesTotal) => {
-        const percentage = Math.floor((bytesUploaded / bytesTotal) * 100);
-        console.log(`📊 Progresso: ${percentage}% (${bytesUploaded}/${bytesTotal})`);
-        
-        if (onProgress) {
-          onProgress(percentage, bytesUploaded, bytesTotal);
-        }
-      },
+      // Envia para NOSSO backend que faz proxy pro Cloudflare
+      const response = await fetch(`${this.baseUrl}/api/color-studio/upload-chunk`, {
+        method: 'PATCH',
+        headers: {
+          'X-Upload-URL': uploadUrl,  // URL do Cloudflare
+          'Upload-Offset': offset.toString(),
+          'Content-Type': 'application/offset+octet-stream'
+        },
+        body: chunk
+      });
 
-      onSuccess: () => {
-        console.log("🎉 Upload TUS concluído com sucesso!");
-        resolve({
-          success: true,
-          uploadedBytes: file.size
-        });
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`Upload falhou: ${errorData.error || response.status}`);
       }
-    });
 
-    // Inicia o upload
-    upload.start();
-  });
+      const result = await response.json();
+      offset = parseInt(result.offset || offset + chunk.size);
+      
+      const progress = Math.floor((offset / file.size) * 100);
+      console.log(`✅ Chunk enviado via proxy! ${progress}% (${offset}/${file.size})`);
+      
+      if (onProgress) {
+        onProgress(progress, offset, file.size);
+      }
+
+      // Pequeno delay entre chunks
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+
+    console.log("🎉 Upload completo via proxy!");
+    return { 
+      success: true, 
+      uploadedBytes: file.size 
+    };
+
+  } catch (error) {
+    console.error("❌ Erro durante upload via proxy:", error);
+    throw error;
+  }
 }
 
   async getVideoStatus(videoId) {
