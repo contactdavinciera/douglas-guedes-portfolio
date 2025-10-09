@@ -134,13 +134,18 @@
 
   .cinema-frame::before,
   .cinema-frame::after {
-    content: '';
+    content: 
     position: absolute;
     left: 0;
     right: 0;
-    height: 15%; /* Altura das barras pretas superior e inferior */
+    height: 20%; /* Aumentado para 20% para ser mais proeminente */
     background-color: #000;
     z-index: 10;
+    box-shadow: 0px 0px 50px rgba(0, 0, 0, 0.8); /* Sombra para ambiente de cinema */
+  }
+
+  .cinema-frame {
+    box-shadow: 0 0 80px rgba(0, 0, 0, 0.7); /* Sombra mais forte para o player */
   }
 
   .cinema-frame::before {
