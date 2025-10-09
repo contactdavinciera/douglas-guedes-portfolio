@@ -259,8 +259,8 @@ def get_video_status():
             return jsonify({"success": False, "error": f"Erro ao obter status do vídeo: {response.status_code} - {response.text}"}), response.status_code
 
     except Exception as e:
-        print(f"❌ Erro ao verificar status do vídeo: {str(e)}")
+        print(f"❌ Erro inesperado na rota /video-status: {str(e)}")
         import traceback
         traceback.print_exc()
-        return jsonify({"success": False, "error": str(e)}), 500
+        return jsonify({"success": False, "error": f"Erro interno do servidor: {str(e)}"}), 500
 
