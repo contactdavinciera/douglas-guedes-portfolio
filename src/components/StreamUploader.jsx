@@ -237,7 +237,7 @@ const StreamUploader = ({
         </div>
       )}
 
-      {uploadState === 'success' && videoIdForPreview && (
+      {/* {uploadState === 'success' && videoIdForPreview && (
         <div className="mt-8">
           {/* Cinema Theater Container */}
           <div className="relative bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900 rounded-2xl p-8 shadow-2xl">
@@ -325,7 +325,8 @@ const StreamUploader = ({
             </div>
           </div>
         </div>
-      )}
+      )} */}
+
 
       {uploadState === 'error' && (
         <div className="bg-red-900/20 border border-red-500/30 rounded-xl p-6">
