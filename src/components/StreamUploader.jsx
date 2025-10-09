@@ -325,7 +325,7 @@ const StreamUploader = ({
             </div>
           </div>
         </div>
-      )} */}
+        )}
 
 
       {uploadState === 'error' && (
