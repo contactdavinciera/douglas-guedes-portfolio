@@ -104,7 +104,7 @@ def get_stream_upload_url():
 @color_studio_bp.route("/stream-proxy", methods=["POST"])
 def stream_proxy_upload():
     """
-    Recebe arquivo e faz upload direto para Cloudflare Stream
+    Recebe arquivo COMPLETO e faz upload TUS para Cloudflare Stream
     """
     try:
         if "file" not in request.files:
@@ -128,85 +128,101 @@ def stream_proxy_upload():
         
         print(f"📤 Recebendo arquivo: {file.filename} ({file_size} bytes)")
         
-        # 1. Obter URL de upload direto do Cloudflare Stream
-        direct_upload_endpoint = f"https://api.cloudflare.com/client/v4/accounts/{CLOUDFLARE_ACCOUNT_ID}/stream/direct_upload"
+        # 1. Criar sessão TUS
+        tus_endpoint = f"https://api.cloudflare.com/client/v4/accounts/{CLOUDFLARE_ACCOUNT_ID}/stream"
         
+        # Codificar o nome do arquivo em base64 para o metadata
+        import base64
+        # Corrigido: Garantir que file.filename é uma string antes de codificar
+        filename_str = str(file.filename) if file.filename else "unknown_file"
+        filename_b64 = base64.b64encode(filename_str.encode("utf-8")).decode("ascii")        
         headers = {
             "Authorization": f"Bearer {CLOUDFLARE_API_TOKEN}",
-            "Content-Type": "application/json"
+            "Tus-Resumable": "1.0.0",
+            "Upload-Length": str(file_size),
+            "Upload-Metadata": f"name {filename_b64}"
         }
         
-        payload = {
-            "maxDurationSeconds": 3600,
-            "allowedOrigins": ["*"],
-            "meta": {
-                "source": "color-studio-backend",
-                "filename": file.filename,
-                "size": file_size
-            }
-        }
+        response = requests.post(tus_endpoint, headers=headers, timeout=30)
         
-        print(f"📤 Solicitando URL de upload direto...")
-        response = requests.post(direct_upload_endpoint, headers=headers, json=payload, timeout=30)
-        
-        if response.status_code != 200:
+        if response.status_code != 201:
             error_msg = response.text
-            print(f"❌ Erro ao obter URL de upload direto: {response.status_code} - {error_msg}")
-            return jsonify({"success": False, "error": f"Failed to get direct upload URL: {error_msg}"}), 500
+            print(f"❌ Erro ao criar sessão TUS: {response.status_code} - {error_msg}")
+            return jsonify({"success": False, "error": f"Failed to create TUS session: {error_msg}"}), 500
         
-        upload_data = response.json()
+        upload_url = response.headers.get("Location")
+        uid = response.headers.get("Stream-Media-Id", "unknown")
         
-        if not upload_data.get("success"):
-            error_msg = upload_data.get("errors", "Unknown error")
-            print(f"❌ Erro na resposta da API: {error_msg}")
-            return jsonify({"success": False, "error": f"API error: {error_msg}"}), 500
-        
-        result = upload_data.get("result", {})
-        upload_url = result.get("uploadURL")
-        uid = result.get("uid")
-        
-        if not upload_url or not uid:
-            print(f"❌ URL de upload ou UID não retornados")
-            return jsonify({"success": False, "error": "Upload URL or UID not returned"}), 500
+        if not upload_url:
+            return jsonify({"success": False, "error": "TUS upload URL not returned"}), 500
 
-        print(f"✅ URL de upload direto obtida: {upload_url}")
-        print(f"✅ UID do vídeo: {uid}")
+        print(f"✅ Sessão TUS criada: {upload_url}")
         
-        # 2. Upload do arquivo usando multipart/form-data
-        file.seek(0)  # Voltar para o início do arquivo
+        # 2. Upload em chunks via TUS
+        # Usar chunk size de 5 MiB conforme requisito mínimo do Cloudflare Stream
+        chunk_size = 5 * 1024 * 1024  # 5 MiB
         
-        files = {"file": (file.filename, file, file.content_type)}
+        offset = 0
         
-        print(f"📦 Enviando arquivo para Cloudflare Stream...")
-        print(f"URL de destino do upload: {upload_url}")
-        print(f"Tamanho do arquivo a ser enviado: {file_size} bytes")
-        
-        try:
-            upload_response = requests.post(upload_url, files=files, timeout=300)  # 5 minutos de timeout
-            
-            print(f"Status do upload para Cloudflare Stream: {upload_response.status_code}")
-            print(f"Resposta do Cloudflare Stream: {upload_response.text}")
+        # Garantir que estamos no início do arquivo
+        file.seek(0)
 
-            if upload_response.status_code not in [200, 201]:
-                print(f"❌ Erro no upload: {upload_response.status_code}")
-                print(f"❌ Response: {upload_response.text}")
-                return jsonify({"success": False, "error": f"Upload failed: {upload_response.status_code} - {upload_response.text}"}), 500
+        while offset < file_size:
+            # Calcular o tamanho do chunk atual
+            remaining = file_size - offset
+            current_chunk_size = min(chunk_size, remaining)
             
-            print(f"🎉 Upload completo! UID: {uid}")
+            chunk = file.read(current_chunk_size)
+            if not chunk:
+                break
             
+            headers = {
+                "Authorization": f"Bearer {CLOUDFLARE_API_TOKEN}",
+                "Content-Type": "application/offset+octet-stream",
+                "Upload-Offset": str(offset),
+                "Tus-Resumable": "1.0.0"
+            }
+            
+            print(f"📦 Enviando chunk: offset={offset}, size={len(chunk)}")
+            
+            try:
+                response = requests.patch(upload_url, headers=headers, data=chunk, timeout=60)
+                
+                if response.status_code not in [200, 204]:
+                    print(f"❌ Erro no chunk: {response.status_code}")
+                    print(f"❌ Response: {response.text}")
+                    print(f"❌ Headers enviados: {headers}")
+                    return jsonify({"success": False, "error": f"Chunk upload failed at offset {offset}: {response.status_code} - {response.text}"}), 500
+            except requests.exceptions.Timeout:
+                print(f"❌ Timeout no chunk offset {offset}")
+                return jsonify({"success": False, "error": f"Timeout uploading chunk at offset {offset}"}), 500
+            except requests.exceptions.RequestException as e:
+                print(f"❌ Erro de rede no chunk offset {offset}: {str(e)}")
+                return jsonify({"success": False, "error": f"Network error uploading chunk at offset {offset}: {str(e)}"}), 500
+            
+            offset += len(chunk)
+            progress = int((offset / file_size) * 100)
+            print(f"📊 Progresso: {progress}%")
+        
+        print(f"🎉 Upload completo! UID: {uid}")
+        
+        # Verificar se o upload foi realmente bem-sucedido
+        if offset != file_size:
+            print(f"⚠️ Aviso: Upload incompleto. Esperado: {file_size}, Enviado: {offset}")
             return jsonify({
-                "success": True,
-                "uid": uid,
-                "message": "Upload completed successfully",
-                "file_size": file_size
-            }), 200
-            
-        except requests.exceptions.Timeout:
-            print(f"❌ Timeout no upload")
-            return jsonify({"success": False, "error": "Upload timeout"}), 500
-        except requests.exceptions.RequestException as e:
-            print(f"❌ Erro de rede no upload: {str(e)}")
-            return jsonify({"success": False, "error": f"Network error during upload: {str(e)}"}), 500
+                "success": False,
+                "error": f"Upload incompleto. Esperado: {file_size} bytes, enviado: {offset} bytes"
+            }), 500
+        
+        print(f"✅ Verificação de integridade passou. Arquivo completo enviado.")
+        
+        return jsonify({
+            "success": True,
+            "uid": uid,
+            "message": "Upload completed successfully",
+            "bytes_uploaded": offset,
+            "file_size": file_size
+        }), 200
         
     except Exception as e:
         print(f"❌ Erro: {str(e)}")
