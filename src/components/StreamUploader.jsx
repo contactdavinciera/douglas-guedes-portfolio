@@ -77,17 +77,23 @@ const StreamUploader = ({
       // Aguardar processamento do vídeo
       setUploadProgress(100);
       console.log('StreamUploader: Upload concluído, aguardando processamento do vídeo...');
+      
+      // Extrair videoId do resultado do upload
+      const videoId = uploadResult.uid || uploadResult.videoId;
+      if (!videoId) {
+        throw new Error('ID do vídeo não retornado pelo upload');
+      }
+      
       const processedVideo = await streamApi.waitForProcessing(videoId);
       console.log('StreamUploader: Vídeo processado. Dados:', processedVideo);
       
       const result = {
         videoId,
-        customerCode,
-        uploadUrl: processedVideo.streamUrl,
+        uploadUrl: processedVideo.streamUrl || processedVideo.playback?.hls,
         metadata: {
           ...metadata,
-          width: processedVideo.metadata.width,
-          height: processedVideo.metadata.height,
+          width: processedVideo.metadata?.width || processedVideo.input?.width,
+          height: processedVideo.metadata?.height || processedVideo.input?.height,
           duration: processedVideo.duration
         }
       };

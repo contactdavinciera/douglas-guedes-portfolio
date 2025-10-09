@@ -61,7 +61,7 @@ def get_stream_upload_url():
         print(f"📤 POST TUS: {tus_endpoint}")
         
         # Criar sessão TUS (POST vazio)
-        response = requests.post(tus_endpoint, headers=headers)
+        response = requests.post(tus_endpoint, headers=headers, timeout=30)
         
         print(f"📥 Status: {response.status_code}")
         print(f"📥 Response Headers: {dict(response.headers)}")
@@ -142,7 +142,7 @@ def stream_proxy_upload():
             "Upload-Metadata": f"name {filename_b64}"
         }
         
-        response = requests.post(tus_endpoint, headers=headers)
+        response = requests.post(tus_endpoint, headers=headers, timeout=30)
         
         if response.status_code != 201:
             error_msg = response.text
@@ -158,8 +158,8 @@ def stream_proxy_upload():
         print(f"✅ Sessão TUS criada: {upload_url}")
         
         # 2. Upload em chunks via TUS
-        # Usar chunk size menor para evitar problemas de memória
-        chunk_size = 64 * 1024  # 64 KiB
+        # Usar chunk size otimizado para uploads grandes
+        chunk_size = 1024 * 1024  # 1 MiB - melhor performance para arquivos grandes
         
         offset = 0
         
@@ -184,12 +184,20 @@ def stream_proxy_upload():
             
             print(f"📦 Enviando chunk: offset={offset}, size={len(chunk)}")
             
-            response = requests.patch(upload_url, headers=headers, data=chunk, timeout=30)
-            
-            if response.status_code not in [200, 204]:
-                print(f"❌ Erro no chunk: {response.status_code}")
-                print(f"❌ Response: {response.text}")
-                return jsonify({"success": False, "error": f"Chunk upload failed: {response.status_code} - {response.text}"}), 500
+            try:
+                response = requests.patch(upload_url, headers=headers, data=chunk, timeout=60)
+                
+                if response.status_code not in [200, 204]:
+                    print(f"❌ Erro no chunk: {response.status_code}")
+                    print(f"❌ Response: {response.text}")
+                    print(f"❌ Headers enviados: {headers}")
+                    return jsonify({"success": False, "error": f"Chunk upload failed at offset {offset}: {response.status_code} - {response.text}"}), 500
+            except requests.exceptions.Timeout:
+                print(f"❌ Timeout no chunk offset {offset}")
+                return jsonify({"success": False, "error": f"Timeout uploading chunk at offset {offset}"}), 500
+            except requests.exceptions.RequestException as e:
+                print(f"❌ Erro de rede no chunk offset {offset}: {str(e)}")
+                return jsonify({"success": False, "error": f"Network error uploading chunk at offset {offset}: {str(e)}"}), 500
             
             offset += len(chunk)
             progress = int((offset / file_size) * 100)
@@ -197,10 +205,22 @@ def stream_proxy_upload():
         
         print(f"🎉 Upload completo! UID: {uid}")
         
+        # Verificar se o upload foi realmente bem-sucedido
+        if offset != file_size:
+            print(f"⚠️ Aviso: Upload incompleto. Esperado: {file_size}, Enviado: {offset}")
+            return jsonify({
+                "success": False,
+                "error": f"Upload incompleto. Esperado: {file_size} bytes, enviado: {offset} bytes"
+            }), 500
+        
+        print(f"✅ Verificação de integridade passou. Arquivo completo enviado.")
+        
         return jsonify({
             "success": True,
             "uid": uid,
-            "message": "Upload completed"
+            "message": "Upload completed successfully",
+            "bytes_uploaded": offset,
+            "file_size": file_size
         }), 200
         
     except Exception as e:
