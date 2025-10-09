@@ -27,95 +27,41 @@ class StreamApiService {
     }
   }
 
-  /**
-   * Obter URL de upload direto do Cloudflare Stream
-   */
-  async getUploadUrl(file) {
-    try {
-      console.log(`📤 Solicitando URL de upload para: ${file.name} (${file.size} bytes)`);
-      
-      const response = await fetch(`${this.baseUrl}/api/color-studio/upload-url`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          fileSize: file.size,
-          fileName: file.name
-        })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `HTTP ${response.status}: Erro ao obter URL de upload`);
-      }
-
-      const data = await response.json();
-      
-      if (!data.uploadURL || !data.uid) {
-        throw new Error("Resposta inválida do backend para URL de upload");
-      }
-
-      console.log(`✅ URL de upload recebida: ${data.uploadURL}`);
-      return data;
-
-    } catch (error) {
-      console.error("❌ Erro ao obter URL de upload:", error);
-      throw new Error(`Falha ao obter URL de upload: ${error.message}`);
-    }
-  }
-
-/**
- * Upload TUS via backend proxy (resolve CORS)
- */
-async uploadWithTus(file, uploadUrl, onProgress) {
+async uploadLargeFile(file, onProgress) {
   try {
-    console.log(`📤 Iniciando upload via proxy para: ${uploadUrl}`);
+    console.log(`📤 Enviando arquivo grande: ${file.name} (${file.size} bytes)`);
     
-    let offset = 0;
-    const chunkSize = 52428800; // 50 MB
+    const formData = new FormData();
+    formData.append('file', file);
 
-    while (offset < file.size) {
-      const chunk = file.slice(offset, offset + chunkSize);
-      
-      console.log(`📦 Enviando chunk via proxy: ${offset} - ${offset + chunk.size}`);
+    const xhr = new XMLHttpRequest();
 
-      // Envia para NOSSO backend que faz proxy pro Cloudflare
-      const response = await fetch(`${this.baseUrl}/api/color-studio/upload-chunk`, {
-        method: 'PATCH',
-        headers: {
-          'X-Upload-URL': uploadUrl,  // URL do Cloudflare
-          'Upload-Offset': offset.toString(),
-          'Content-Type': 'application/offset+octet-stream'
-        },
-        body: chunk
-      });
+    return new Promise((resolve, reject) => {
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable && onProgress) {
+          const progress = Math.floor((e.loaded / e.total) * 100);
+          console.log(`📊 Progresso: ${progress}%`);
+          onProgress(progress, e.loaded, e.total);
+        }
+      };
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(`Upload falhou: ${errorData.error || response.status}`);
-      }
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          const result = JSON.parse(xhr.responseText);
+          console.log("✅ Upload completo!", result);
+          resolve(result);
+        } else {
+          reject(new Error(`Upload failed: ${xhr.status}`));
+        }
+      };
 
-      const result = await response.json();
-      offset = parseInt(result.offset || offset + chunk.size);
-      
-      const progress = Math.floor((offset / file.size) * 100);
-      console.log(`✅ Chunk enviado via proxy! ${progress}% (${offset}/${file.size})`);
-      
-      if (onProgress) {
-        onProgress(progress, offset, file.size);
-      }
+      xhr.onerror = () => reject(new Error('Network error'));
 
-      // Pequeno delay entre chunks
-      await new Promise(resolve => setTimeout(resolve, 100));
-    }
-
-    console.log("🎉 Upload completo via proxy!");
-    return { 
-      success: true, 
-      uploadedBytes: file.size 
-    };
-
+      xhr.open('POST', `${this.baseUrl}/api/color-studio/stream-proxy`);
+      xhr.send(formData);
+    });
   } catch (error) {
-    console.error("❌ Erro durante upload via proxy:", error);
+    console.error("❌ Erro:", error);
     throw error;
   }
 }
