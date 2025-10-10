@@ -27,8 +27,8 @@ CORS(app, resources={
             "http://localhost:5173",
             "http://localhost:3000"
         ],
-        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        "allow_headers": ["Content-Type", "Authorization"]
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+        "allow_headers": ["Content-Type", "Authorization", "Upload-Offset", "Upload-Length"]
     }
 })
 app.config['SECRET_KEY'] = 'asdf#FGSgvasgf$5$WGT'
