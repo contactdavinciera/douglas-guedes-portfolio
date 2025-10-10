@@ -18,7 +18,7 @@ class ConversionService:
         # 1. Baixar o arquivo original do R2
         download_url_response = self.r2_service.generate_presigned_url(original_file_key)
         if not download_url_response["success"]:
-            return {"success": False, "error": f"Failed to get presigned URL: {download_url_response["error"]}"}
+            return {"success": False, "error": f"Failed to get presigned URL: {download_url_response['error']}"}
         download_url = download_url_response["url"]
 
         # Criar diretório temporário para download e conversão
