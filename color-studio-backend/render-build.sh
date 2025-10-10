@@ -4,5 +4,5 @@ apt-get update
 apt-get install -y ffmpeg
 
 # Instalar dependências Python
-pip install -r color-studio-backend/requirements.txt
+pip install -r requirements.txt
 
