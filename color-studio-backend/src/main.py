@@ -2,7 +2,7 @@
 import os
 import sys
 from dotenv import load_dotenv
-from flask import Flask, send_from_directory
+from flask import Flask, send_from_directory, request
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 
@@ -46,12 +46,19 @@ def create_app():
     db.init_app(app)
 
     # --- Configuração do CORS ---
-    CORS(app,
-         resources={r"/api/*": {"origins": "*"}},
-         allow_headers=["Content-Type", "Authorization", "Upload-Offset", "Upload-Length", "Tus-Resumable"],
-         methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"],
-         expose_headers=["Upload-Offset", "Upload-Length", "Tus-Resumable", "Location"],
-         supports_credentials=True)
+    CORS(app, resources={r"/api/*": {"origins": "*"}})
+
+    # --- Tratamento de requisições OPTIONS (Preflight) ---
+    @app.before_request
+    def handle_options_requests():
+        if request.method == 'OPTIONS':
+            response = app.make_response('')
+            response.headers.add("Access-Control-Allow-Origin", "*")
+            response.headers.add("Access-Control-Allow-Headers", "Content-Type, Authorization, Upload-Offset, Upload-Length, Tus-Resumable")
+            response.headers.add("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH, HEAD")
+            response.headers.add("Access-Control-Expose-Headers", "Upload-Offset, Upload-Length, Tus-Resumable, Location")
+            response.headers.add("Access-Control-Allow-Credentials", "true")
+            return response
 
     # --- Registro dos Blueprints ---
     app.register_blueprint(user_bp, url_prefix='/api')
@@ -75,15 +82,6 @@ def create_app():
             return send_from_directory(static_folder, path)
         else:
             return send_from_directory(static_folder, 'index.html')
-
-    @app.after_request
-    def add_cors_headers(response):
-        response.headers.add("Access-Control-Allow-Origin", "*")
-        response.headers.add("Access-Control-Allow-Headers", "Content-Type, Authorization, Upload-Offset, Upload-Length, Tus-Resumable")
-        response.headers.add("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH, HEAD")
-        response.headers.add("Access-Control-Expose-Headers", "Upload-Offset, Upload-Length, Tus-Resumable, Location")
-        response.headers.add("Access-Control-Allow-Credentials", "true")
-        return response
 
     return app
 
