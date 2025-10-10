@@ -3,6 +3,8 @@ import boto3
 from botocore.client import Config
 from botocore.exceptions import ClientError
 import mimetypes
+import uuid
+from datetime import datetime
 
 class R2UploadService:
     """
@@ -32,7 +34,7 @@ class R2UploadService:
         self.bucket_name = os.getenv('R2_BUCKET_NAME', 'color-studio-raw')
         
         if not all([self.account_id, self.access_key_id, self.secret_access_key]):
-            raise ValueError("R2 credentials not configured")
+            raise ValueError("R2 credentials not configured. Check environment variables.")
         
         # Endpoint R2
         self.endpoint_url = f'https://{self.account_id}.r2.cloudflarestorage.com'
@@ -46,6 +48,8 @@ class R2UploadService:
             config=Config(signature_version='s3v4'),
             region_name='auto'
         )
+        
+        print(f"✅ R2 Service initialized: {self.endpoint_url}/{self.bucket_name}")
     
     @staticmethod
     def is_raw_format(filename):
@@ -59,14 +63,18 @@ class R2UploadService:
         ext = filename.rsplit('.', 1)[-1].lower() if '.' in filename else ''
         return ext in R2UploadService.STREAM_FORMATS
     
+    @staticmethod
+    def get_file_extension(filename):
+        """Retorna a extensão do arquivo"""
+        return filename.rsplit('.', 1)[-1].lower() if '.' in filename else 'raw'
+    
     def create_multipart_upload(self, filename, metadata=None):
         """
         Inicia upload multipart no R2
         """
         try:
             # Gerar key único
-            import uuid
-            file_ext = filename.rsplit('.', 1)[-1] if '.' in filename else 'raw'
+            file_ext = self.get_file_extension(filename)
             key = f"raw/{uuid.uuid4()}.{file_ext}"
             
             # Detectar content type
@@ -75,8 +83,11 @@ class R2UploadService:
             # Metadata adicional
             extra_args = {
                 'ContentType': content_type,
-                'Metadata': metadata or {}
             }
+            
+            # Adicionar metadata customizado se fornecido
+            if metadata:
+                extra_args['Metadata'] = metadata
             
             # Iniciar multipart upload
             response = self.s3_client.create_multipart_upload(
@@ -234,3 +245,4 @@ class R2UploadService:
                 'success': False,
                 'error': str(e)
             }
+
