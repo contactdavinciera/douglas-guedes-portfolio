@@ -113,6 +113,12 @@ class R2UploadService:
                 'success': False,
                 'error': str(e)
             }
+        except Exception as e:
+            print(f"❌ Erro inesperado ao criar multipart upload: {e}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
     
     def upload_part(self, upload_id, key, part_number, data):
         """
@@ -143,6 +149,12 @@ class R2UploadService:
                 'success': False,
                 'error': str(e)
             }
+        except Exception as e:
+            print(f"❌ Erro inesperado ao fazer upload da parte {part_number}: {e}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
     
     def complete_multipart_upload(self, upload_id, key, parts):
         """
@@ -157,7 +169,7 @@ class R2UploadService:
                 MultipartUpload={'Parts': parts}
             )
             
-            # Gerar URL pública (se bucket for público) ou presigned URL
+            # URL público (R2 endpoint)
             public_url = f"{self.endpoint_url}/{self.bucket_name}/{key}"
             
             print(f"✅ Upload completo: {public_url}")
@@ -171,6 +183,12 @@ class R2UploadService:
             
         except ClientError as e:
             print(f"❌ Erro ao completar upload: {e}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
+        except Exception as e:
+            print(f"❌ Erro inesperado ao completar upload: {e}")
             return {
                 'success': False,
                 'error': str(e)
@@ -197,10 +215,16 @@ class R2UploadService:
                 'success': False,
                 'error': str(e)
             }
+        except Exception as e:
+            print(f"❌ Erro inesperado ao cancelar upload: {e}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
     
-    def generate_presigned_url(self, key, expiration=3600):
+    def generate_presigned_url(self, key, expiration=86400):
         """
-        Gera URL assinada para download
+        Gera URL assinada para download (padrão: 24h)
         """
         try:
             url = self.s3_client.generate_presigned_url(
@@ -212,6 +236,8 @@ class R2UploadService:
                 ExpiresIn=expiration
             )
             
+            print(f"✅ Presigned URL gerada: {key} (expira em {expiration}s)")
+            
             return {
                 'success': True,
                 'url': url,
@@ -220,6 +246,12 @@ class R2UploadService:
             
         except ClientError as e:
             print(f"❌ Erro ao gerar presigned URL: {e}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
+        except Exception as e:
+            print(f"❌ Erro inesperado ao gerar presigned URL: {e}")
             return {
                 'success': False,
                 'error': str(e)
@@ -241,6 +273,54 @@ class R2UploadService:
             
         except ClientError as e:
             print(f"❌ Erro ao deletar arquivo: {e}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
+        except Exception as e:
+            print(f"❌ Erro inesperado ao deletar arquivo: {e}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
+    
+    def list_files(self, prefix='raw/', max_keys=1000):
+        """
+        Lista arquivos no bucket
+        """
+        try:
+            response = self.s3_client.list_objects_v2(
+                Bucket=self.bucket_name,
+                Prefix=prefix,
+                MaxKeys=max_keys
+            )
+            
+            files = []
+            if 'Contents' in response:
+                for obj in response['Contents']:
+                    files.append({
+                        'key': obj['Key'],
+                        'size': obj['Size'],
+                        'last_modified': obj['LastModified'].isoformat(),
+                        'etag': obj['ETag']
+                    })
+            
+            print(f"✅ Listados {len(files)} arquivos")
+            
+            return {
+                'success': True,
+                'files': files,
+                'count': len(files)
+            }
+            
+        except ClientError as e:
+            print(f"❌ Erro ao listar arquivos: {e}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
+        except Exception as e:
+            print(f"❌ Erro inesperado ao listar arquivos: {e}")
             return {
                 'success': False,
                 'error': str(e)

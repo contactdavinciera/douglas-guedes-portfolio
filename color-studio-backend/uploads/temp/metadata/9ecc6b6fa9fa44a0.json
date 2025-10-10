@@ -1,0 +1,13 @@
+{
+  "upload_id": "9ecc6b6fa9fa44a0",
+  "filename": "test.mp4",
+  "file_size": 10485760,
+  "bytes_uploaded": 0,
+  "created_at": "2025-10-10T14:20:23.206285",
+  "last_modified": "2025-10-10T14:20:23.206287",
+  "metadata": {
+    "client_email": "client@example.com",
+    "project_name": "Test Project"
+  },
+  "status": "created"
+}
