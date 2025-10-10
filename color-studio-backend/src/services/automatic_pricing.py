@@ -143,7 +143,8 @@ class AutomaticPricing:
         Categoriza a resolução em faixas de preço
         """
         try:
-         width, height = map(int, resolution.lower().replace(\'x\', \' \').split())           total_pixels = width * height
+         width, height = map(int, resolution.lower().replace('x', ' ').split())
+            total_pixels = width * height
             
             if total_pixels >= 7680 * 4320:
                 return '8K'
