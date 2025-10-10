@@ -210,35 +210,49 @@ async uploadLargeFile(file, onProgress) {
   /**
    * Aguardar processamento do vídeo com polling
    */
-  async waitForProcessing(videoId, maxAttempts = 60, interval = 2000) {
+  async waitForProcessing(videoId, maxAttempts = 180, interval = 3000) {
     console.log(`⏳ Aguardando processamento do vídeo ${videoId}...`);
     
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
-        const statusResponse = await this.getVideoStatus(videoId);
-        const video = statusResponse.video || statusResponse;
+        // getVideoStatus já retorna response.cf.result
+        const video = await this.getVideoStatus(videoId);
+        
+        console.log(`Tentativa ${attempt}/${maxAttempts} - Status completo:`, {
+          ready: video.ready,
+          state: video.status?.state,
+          pctComplete: video.status?.pctComplete,
+          errorReasonText: video.status?.errorReasonText
+        });
 
-        console.log(`Tentativa ${attempt}/${maxAttempts} - Status: ${video.status}`);
+        // ✅ CORREÇÃO: Verificar video.status.state === "ready"
+        const isReady = 
+          video.ready === true || 
+          video.status?.state === "ready" ||
+          video.status?.pctComplete === "100.000000";
 
-        if (video.ready) {
+        if (isReady) {
           console.log("✅ Vídeo processado com sucesso!");
           return video;
         }
 
-        if (video.status === "error") {
-          throw new Error("Erro no processamento do vídeo pelo Cloudflare Stream");
+        // Verificar se houve erro
+        if (video.status?.state === "error") {
+          throw new Error(`Erro no processamento: ${video.status?.errorReasonText || 'Erro desconhecido'}`);
         }
 
         // Aguardar antes da próxima verificação
         await new Promise(resolve => setTimeout(resolve, interval));
         
       } catch (error) {
+        console.warn(`⚠️ Erro na tentativa ${attempt}:`, error.message);
+        
+        // Se for a última tentativa, lançar erro
         if (attempt === maxAttempts) {
-          throw new Error(`Timeout: Vídeo não processado após ${maxAttempts} tentativas`);
+          throw new Error(`Timeout após ${(maxAttempts * interval) / 60000} minutos: ${error.message}`);
         }
         
-        // Se não for a última tentativa, aguarda e tenta novamente
-        console.warn(`⚠️ Erro na tentativa ${attempt}, tentando novamente...`);
+        // Aguardar antes de tentar novamente
         await new Promise(resolve => setTimeout(resolve, interval));
       }
     }
