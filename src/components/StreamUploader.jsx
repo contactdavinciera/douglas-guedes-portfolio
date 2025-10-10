@@ -239,25 +239,44 @@ const StreamUploader = ({
       )}
 
       {uploadState === 'success' && videoIdForPreview && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-center p-8 bg-green-50 dark:bg-green-900/20 rounded-lg border-2 border-green-500">
-            <CheckCircle className="w-12 h-12 text-green-500 mr-4" />
+        <div className="space-y-6">
+          {/* Video Player */}
+          <div className="relative w-full aspect-video bg-black rounded-lg overflow-hidden">
+            <iframe
+              src={`https://customer-5dr3ublgoe3wg2wj.cloudflarestream.com/${videoIdForPreview}/iframe`}
+              style={{
+                border: 'none',
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                height: '100%',
+                width: '100%'
+              }}
+              allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture;"
+              allowFullScreen={true}
+            />
+          </div>
+
+          {/* Upload Info */}
+          <div className="flex items-center justify-center p-6 bg-green-50 dark:bg-green-900/20 rounded-lg border-2 border-green-500">
+            <CheckCircle className="w-10 h-10 text-green-500 mr-4" />
             <div>
               <h3 className="text-lg font-semibold text-green-700 dark:text-green-400">
                 Upload Concluído!
               </h3>
               <p className="text-sm text-green-600 dark:text-green-500">
-                {uploadedFile?.name} foi enviado com sucesso
+                {uploadedFile?.name || 'Vídeo'} foi enviado com sucesso
               </p>
             </div>
           </div>
 
+          {/* Video Metadata */}
           {videoMetadata && (
             <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg space-y-2">
-              <h4 className="font-semibold text-sm text-gray-700 dark:text-gray-300">
+              <h4 className="font-semibold text-sm text-700 dark:text-gray-300">
                 Informações do Arquivo
               </h4>
-              <div className="grid grid-cols-2 gap-2 text-sm">
+              <div className="grid grid-cols-2 gap-3 text-sm">
                 <div>
                   <span className="text-gray-500">Formato:</span>
                   <span className="ml-2 font-medium">{videoMetadata.format}</span>
@@ -276,11 +295,29 @@ const StreamUploader = ({
                     {videoMetadata.isRaw ? 'RAW' : 'Processado'}
                   </span>
                 </div>
+                {videoMetadata.width && videoMetadata.height && (
+                  <div>
+                    <span className="text-gray-500">Resolução:</span>
+                    <span className="ml-2 font-medium">
+                      {videoMetadata.width}x{videoMetadata.height}
+                    </span>
+                  </div>
+                )}
+                {videoMetadata.duration && (
+                  <div>
+                    <span className="text-gray-500">Duração:</span>
+                    <span className="ml-2 font-medium">
+                      {Math.round(videoMetadata.duration)}s
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
           )}
 
-          <Button onClick={resetUpload} className="w-full">
+          {/* Reset Button */}
+          <Button onClick={resetUpload} className="w-full" size="lg">
+            <Upload className="w-4 h-4 mr-2" />
             Enviar Outro Arquivo
           </Button>
         </div>
