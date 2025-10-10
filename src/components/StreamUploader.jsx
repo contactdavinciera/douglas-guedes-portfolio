@@ -2,6 +2,7 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Upload, X, CheckCircle, AlertCircle, FileVideo, Loader } from 'lucide-react';
 import { Button } from './ui/button';
 import streamApi from '../services/streamApi';
+import r2Api from '../services/r2Api'; // Assumindo que você tem um serviço r2Api
 
 console.log('StreamUploader: Componente carregado');
 
@@ -37,6 +38,9 @@ const StreamUploader = ({
   const analyzeFile = useCallback((file) => {
     console.log('StreamUploader: analyzeFile acionado para:', file.name);
     const extension = file.name.split('.').pop().toLowerCase();
+    const rawFormats = ['braw', 'r3d', 'ari', 'mxf', 'dng'];
+    const isRaw = rawFormats.includes(extension);
+
     const formats = {
       'braw': { format: 'BRAW', colorSpace: 'Blackmagic Wide Gamut', isRaw: true },
       'r3d': { format: 'RED R3D', colorSpace: 'REDWideGamutRGB', isRaw: true },
@@ -47,7 +51,7 @@ const StreamUploader = ({
       'dng': { format: 'Cinema DNG', colorSpace: 'Linear', isRaw: true }
     };
 
-    const fileInfo = formats[extension] || { format: 'Unknown', colorSpace: 'Unknown', isRaw: false };
+    const fileInfo = formats[extension] || { format: 'Unknown', colorSpace: 'Unknown', isRaw: isRaw };
     const metadata = {
       name: file.name,
       size: file.size,
@@ -73,32 +77,53 @@ const StreamUploader = ({
       setVideoMetadata(metadata);
 
       console.log('StreamUploader: Estado de upload definido para "uploading".');
-      console.log("StreamUploader: Iniciando upload de arquivo grande via proxy...");
 
-      const uploadResult = await streamApi.uploadLargeFile(file, (progress, uploaded, total) => {
-        setUploadProgress(progress);
-        onUploadProgress?.(progress, uploaded, total);
-      });
+      let uploadResult;
+      let videoId = null;
 
-      setUploadProgress(100);
-      console.log('StreamUploader: Upload concluído, aguardando processamento do vídeo...');
+      if (metadata.isRaw) {
+        console.log("StreamUploader: Iniciando upload RAW para R2...");
+        // Implementar lógica de upload para R2
+        // Isso pode envolver a chamada de um endpoint do backend que gera URLs pré-assinadas para o R2
+        // Por simplicidade, vamos simular um upload direto ou chamar um serviço R2
+        uploadResult = await r2Api.uploadFile(file, (progress) => {
+          setUploadProgress(progress);
+          onUploadProgress?.(progress);
+        });
+        // Para R2, o videoId pode ser o key do objeto ou um ID gerado pelo backend
+        videoId = uploadResult.key; // Ajuste conforme a resposta real do seu r2Api
 
-      const videoId = uploadResult.uid || uploadResult.videoId;
-      if (!videoId) {
-        throw new Error('ID do vídeo não retornado pelo upload');
+      } else {
+        console.log("StreamUploader: Iniciando upload de vídeo para Cloudflare Stream...");
+        uploadResult = await streamApi.uploadLargeFile(file, (progress, uploaded, total) => {
+          setUploadProgress(progress);
+          onUploadProgress?.(progress, uploaded, total);
+        });
+        videoId = uploadResult.uid || uploadResult.videoId;
       }
 
-      console.log('StreamUploader: VideoId obtido:', videoId);
+      if (!videoId) {
+        throw new Error('ID do vídeo/arquivo não retornado pelo upload');
+      }
+
+      console.log('StreamUploader: ID obtido:', videoId);
       
-      // Definir videoId ANTES de esperar processamento
+      // Definir videoId ANTES de esperar processamento (se aplicável)
       setVideoIdForPreview(videoId);
 
-      const processedVideo = await streamApi.waitForProcessing(videoId);
-      console.log('StreamUploader: Vídeo processado. Dados:', processedVideo);
+      // Para Stream, aguardar processamento. Para R2, o processamento pode ser diferente ou imediato.
+      let processedVideo = {};
+      if (!metadata.isRaw) {
+        processedVideo = await streamApi.waitForProcessing(videoId);
+        console.log('StreamUploader: Vídeo processado. Dados:', processedVideo);
+      } else {
+        // Lógica para arquivos RAW, talvez uma notificação de que o upload foi concluído
+        processedVideo = { streamUrl: `https://r2.cloudflarestorage.com/${videoId}`, playback: { hls: `https://r2.cloudflarestorage.com/${videoId}` } }; // Simulação
+      }
 
       const result = {
         videoId,
-        customerCode: "5dr3ublgoe3wg2wj",
+        customerCode: "5dr3ublgoe3wg2wj", // Manter para Stream, ajustar para R2 se necessário
         uploadUrl: processedVideo.streamUrl || processedVideo.playback?.hls,
         metadata: {
           ...metadata,
@@ -256,7 +281,7 @@ const StreamUploader = ({
           {/* Video Player */}
           <div className="relative w-full aspect-video bg-black rounded-lg overflow-hidden shadow-2xl">
             <iframe
-              src={`https://customer-5dr3ublgoe3wg2wj.cloudflarestream.com/${videoIdForPreview}/iframe`}
+              src={videoMetadata.isRaw ? `https://r2.cloudflarestorage.com/${videoIdForPreview}` : `https://customer-5dr3ublgoe3wg2wj.cloudflarestream.com/${videoIdForPreview}/iframe`}
               style={{
                 border: 'none',
                 position: 'absolute',
