@@ -27,6 +27,7 @@ function App() {
             <Route path="/services" element={<Services />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/color-studio" element={<ColorStudio />} />
+            <Route path="/color-studio/:mediaFileId" element={<ColorStudio />} />
             <Route path="/dashboard" element={<ClientDashboard />} />
           </Routes>
         </main>

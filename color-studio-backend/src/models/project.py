@@ -1,11 +1,9 @@
-from flask_sqlalchemy import SQLAlchemy
+from src.models import db
 from datetime import datetime
 import json
 
-db = SQLAlchemy()
-
 class Project(db.Model):
-    __tablename__ = 'projects'
+    __tablename__ = 'project'
     
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(255), nullable=False)
