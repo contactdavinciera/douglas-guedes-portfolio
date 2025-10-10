@@ -1,0 +1,236 @@
+import os
+import boto3
+from botocore.client import Config
+from botocore.exceptions import ClientError
+import mimetypes
+
+class R2UploadService:
+    """
+    Serviço para upload de arquivos RAW no Cloudflare R2 (S3-compatible)
+    """
+    
+    # Formatos RAW que vão para R2
+    RAW_FORMATS = {
+        'braw',      # Blackmagic RAW
+        'r3d',       # RED RAW
+        'ari',       # ARRIRAW
+        'dng',       # Cinema DNG
+        'crm',       # Canon RAW
+        'mxf',       # MXF (pode conter RAW)
+    }
+    
+    # Formatos de vídeo que vão para Stream
+    STREAM_FORMATS = {
+        'mp4', 'mov', 'mkv', 'avi', 'webm', 
+        'flv', 'mpg', 'mpeg', '3gp', 'wmv'
+    }
+    
+    def __init__(self):
+        self.account_id = os.getenv('CLOUDFLARE_ACCOUNT_ID')
+        self.access_key_id = os.getenv('R2_ACCESS_KEY_ID')
+        self.secret_access_key = os.getenv('R2_SECRET_ACCESS_KEY')
+        self.bucket_name = os.getenv('R2_BUCKET_NAME', 'color-studio-raw')
+        
+        if not all([self.account_id, self.access_key_id, self.secret_access_key]):
+            raise ValueError("R2 credentials not configured")
+        
+        # Endpoint R2
+        self.endpoint_url = f'https://{self.account_id}.r2.cloudflarestorage.com'
+        
+        # Cliente S3 configurado para R2
+        self.s3_client = boto3.client(
+            's3',
+            endpoint_url=self.endpoint_url,
+            aws_access_key_id=self.access_key_id,
+            aws_secret_access_key=self.secret_access_key,
+            config=Config(signature_version='s3v4'),
+            region_name='auto'
+        )
+    
+    @staticmethod
+    def is_raw_format(filename):
+        """Verifica se o arquivo é RAW"""
+        ext = filename.rsplit('.', 1)[-1].lower() if '.' in filename else ''
+        return ext in R2UploadService.RAW_FORMATS
+    
+    @staticmethod
+    def is_stream_format(filename):
+        """Verifica se o arquivo é compatível com Stream"""
+        ext = filename.rsplit('.', 1)[-1].lower() if '.' in filename else ''
+        return ext in R2UploadService.STREAM_FORMATS
+    
+    def create_multipart_upload(self, filename, metadata=None):
+        """
+        Inicia upload multipart no R2
+        """
+        try:
+            # Gerar key único
+            import uuid
+            file_ext = filename.rsplit('.', 1)[-1] if '.' in filename else 'raw'
+            key = f"raw/{uuid.uuid4()}.{file_ext}"
+            
+            # Detectar content type
+            content_type = mimetypes.guess_type(filename)[0] or 'application/octet-stream'
+            
+            # Metadata adicional
+            extra_args = {
+                'ContentType': content_type,
+                'Metadata': metadata or {}
+            }
+            
+            # Iniciar multipart upload
+            response = self.s3_client.create_multipart_upload(
+                Bucket=self.bucket_name,
+                Key=key,
+                **extra_args
+            )
+            
+            upload_id = response['UploadId']
+            
+            print(f"✅ Multipart upload iniciado: {key} (UploadId: {upload_id})")
+            
+            return {
+                'success': True,
+                'upload_id': upload_id,
+                'key': key,
+                'bucket': self.bucket_name
+            }
+            
+        except ClientError as e:
+            print(f"❌ Erro ao criar multipart upload: {e}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
+    
+    def upload_part(self, upload_id, key, part_number, data):
+        """
+        Faz upload de uma parte do arquivo
+        """
+        try:
+            response = self.s3_client.upload_part(
+                Bucket=self.bucket_name,
+                Key=key,
+                UploadId=upload_id,
+                PartNumber=part_number,
+                Body=data
+            )
+            
+            etag = response['ETag']
+            
+            print(f"✅ Part {part_number} uploaded: {etag}")
+            
+            return {
+                'success': True,
+                'part_number': part_number,
+                'etag': etag
+            }
+            
+        except ClientError as e:
+            print(f"❌ Erro ao fazer upload da parte {part_number}: {e}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
+    
+    def complete_multipart_upload(self, upload_id, key, parts):
+        """
+        Finaliza o upload multipart
+        parts = [{'PartNumber': 1, 'ETag': 'xxx'}, ...]
+        """
+        try:
+            response = self.s3_client.complete_multipart_upload(
+                Bucket=self.bucket_name,
+                Key=key,
+                UploadId=upload_id,
+                MultipartUpload={'Parts': parts}
+            )
+            
+            # Gerar URL pública (se bucket for público) ou presigned URL
+            public_url = f"{self.endpoint_url}/{self.bucket_name}/{key}"
+            
+            print(f"✅ Upload completo: {public_url}")
+            
+            return {
+                'success': True,
+                'url': public_url,
+                'key': key,
+                'location': response.get('Location')
+            }
+            
+        except ClientError as e:
+            print(f"❌ Erro ao completar upload: {e}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
+    
+    def abort_multipart_upload(self, upload_id, key):
+        """
+        Cancela um upload multipart
+        """
+        try:
+            self.s3_client.abort_multipart_upload(
+                Bucket=self.bucket_name,
+                Key=key,
+                UploadId=upload_id
+            )
+            
+            print(f"✅ Upload cancelado: {key}")
+            
+            return {'success': True}
+            
+        except ClientError as e:
+            print(f"❌ Erro ao cancelar upload: {e}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
+    
+    def generate_presigned_url(self, key, expiration=3600):
+        """
+        Gera URL assinada para download
+        """
+        try:
+            url = self.s3_client.generate_presigned_url(
+                'get_object',
+                Params={
+                    'Bucket': self.bucket_name,
+                    'Key': key
+                },
+                ExpiresIn=expiration
+            )
+            
+            return {
+                'success': True,
+                'url': url,
+                'expires_in': expiration
+            }
+            
+        except ClientError as e:
+            print(f"❌ Erro ao gerar presigned URL: {e}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
+    
+    def delete_file(self, key):
+        """
+        Deleta um arquivo do R2
+        """
+        try:
+            self.s3_client.delete_object(
+                Bucket=self.bucket_name,
+                Key=key
+            )
+            
+            print(f"✅ Arquivo deletado: {key}")
+            
+            return {'success': True}
+            
+        except ClientError as e:
+            print(f"❌ Erro ao deletar arquivo: {e}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
