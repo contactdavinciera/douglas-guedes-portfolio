@@ -115,7 +115,7 @@ def process_completed_upload(upload_id):
         )
         
         # Mover arquivo para local permanente
-        final_filename = f"{upload_id}_{upload_status["filename"]}"
+        final_filename = f"{upload_id}_{upload_status['filename']}"
         final_path = os.path.join("uploads/projects", final_filename)
         
         tus_manager.finalize_upload(upload_id, final_path)
