@@ -1,5 +1,6 @@
-from flask import Blueprint, request, jsonify, current_app
+from flask import Blueprint, request, jsonify, current_app, make_response
 import os
+import requests
 from src.services.tus_upload_manager import TUSUploadManager
 from src.services.r2_upload_service import R2UploadService
 from src.services.video_analyzer import VideoAnalyzer
@@ -49,7 +50,7 @@ def create_upload():
             if result["success"]:
                 return jsonify({
                     "upload_id": result["upload_id"],
-                    "upload_url": f"/api/upload/r2-part/{result['upload_id']}",
+                    "upload_url": f"/api/upload/r2-part/{result["upload_id"]}",
                     "upload_type": "r2",
                     "key": result["key"],
                     "bucket": result["bucket"],
@@ -148,7 +149,7 @@ def process_completed_upload(upload_id):
         )
         
         # Mover arquivo para local permanente
-        final_filename = f"{upload_id}_{upload_status['filename']}"
+        final_filename = f"{upload_id}_{upload_status["filename"]}"
         final_path = os.path.join("uploads/projects", final_filename)
         
         tus_manager.finalize_upload(upload_id, final_path)
@@ -275,6 +276,56 @@ def abort_r2_upload(upload_id):
         result = r2_service.abort_multipart_upload(upload_id, key)
         
         return jsonify(result)
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@upload_bp.route('/api/color-studio/upload/stream/init', methods=['POST', 'OPTIONS'])
+def init_stream_upload():
+    if request.method == 'OPTIONS':
+        # Responde ao preflight CORS
+        response = make_response()
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
+        response.headers.add('Access-Control-Allow-Methods', 'POST')
+        return response
+    
+    try:
+        # Gera token de upload direto para Cloudflare Stream
+        cloudflare_account_id = os.getenv('CLOUDFLARE_ACCOUNT_ID')
+        cloudflare_api_token = os.getenv('CLOUDFLARE_API_TOKEN')
+
+        if not cloudflare_account_id or not cloudflare_api_token:
+            return jsonify({"error": "Variáveis de ambiente CLOUDFLARE_ACCOUNT_ID ou CLOUDFLARE_API_TOKEN não configuradas."}), 500
+
+        url = f"https://api.cloudflare.com/client/v4/accounts/{cloudflare_account_id}/stream/direct_upload"
+        
+        headers = {
+            "Authorization": f"Bearer {cloudflare_api_token}",
+            "Content-Type": "application/json"
+        }
+        
+        data = {
+            "maxDurationSeconds": 21600,  # 6 horas
+            "requireSignedURLs": False,
+            "allowedOrigins": [
+                "https://douglas-guedes-portfolio.onrender.com",
+                "https://douglas-guedes-portfolio.pages.dev",
+                "http://localhost:3000",
+                "http://localhost:5173"
+            ]
+        }
+        
+        response = requests.post(url, headers=headers, json=data)
+        stream_data = response.json()
+        
+        if stream_data.get('success'):
+            return jsonify({
+                "uploadURL": stream_data['result']['uploadURL'],
+                "uid": stream_data['result']['uid']
+            })
+        else:
+            return jsonify({"error": stream_data.get('errors', [{}])[0].get('message', 'Erro desconhecido ao criar token de upload do Stream')}), 500
         
     except Exception as e:
         return jsonify({"error": str(e)}), 500
