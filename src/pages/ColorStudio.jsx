@@ -1,19 +1,12 @@
 import React, { useState, useRef } from 'react';
+import { uploadFile, isRawFormat } from '../services/uploadService';
 
-export default function ColorStudioPro() {
-  const [file, setFile] = useState(null);
-  const [fileInfo, setFileInfo] = useState(null);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [uploadStatus, setUploadStatus] = useState('idle');
-  const [videoId, setVideoId] = useState(null);
-  const [conversionStatus, setConversionStatus] = useState(null);
+function ColorStudio() {
+  const [uploading, setUploading] = useState(false);
+  const [progress, setProgress] = useState(0);
   const [error, setError] = useState(null);
-  const [showTimeline, setShowTimeline] = useState(false);
-
-  const API_BASE = 'https://douglas-guedes-portfolio.onrender.com';
-
-  // Formatos RAW suportados
-  const RAW_FORMATS = ['.braw', '.r3d', '.ari', '.mxf', '.dpx', '.exr'];
+  const [fileInfo, setFileInfo] = useState(null);
+  const [uploadStatus, setUploadStatus] = useState('idle');
 
   const formatFileSize = (bytes) => {
     if (bytes === 0) return '0 Bytes';
@@ -23,29 +16,20 @@ export default function ColorStudioPro() {
     return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
   };
 
-  const formatDuration = (seconds) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  const handleFileSelect = async (e) => {
-    const selectedFile = e.target.files[0];
+  const handleFileSelect = async (event) => {
+    const selectedFile = event.target.files[0];
     if (!selectedFile) return;
 
-    setFile(selectedFile);
+    setFileInfo(null);
     setError(null);
     setUploadStatus('analyzing');
 
-    // Análise básica do arquivo
     const info = {
       name: selectedFile.name,
       size: selectedFile.size,
       type: selectedFile.type || 'application/octet-stream',
       extension: '.' + selectedFile.name.split('.').pop().toLowerCase(),
-      isRaw: RAW_FORMATS.some(format => 
-        selectedFile.name.toLowerCase().endsWith(format)
-      )
+      isRaw: isRawFormat(selectedFile.name)
     };
 
     // Tentar obter duração do vídeo (se possível)
@@ -73,146 +57,38 @@ export default function ColorStudioPro() {
     setUploadStatus('ready');
   };
 
-  const startUpload = async () => {
-    if (!file || !fileInfo) return;
+  const handleUpload = async () => {
+    if (!fileInfo) return;
 
-    setUploadStatus('uploading');
+    setUploading(true);
     setError(null);
+    setProgress(0);
+    setUploadStatus('uploading');
 
     try {
-      // 1. Iniciar upload multipart
-      const initResponse = await fetch(`${API_BASE}/api/color-studio/upload/raw/init`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          filename: file.name,
-          filesize: file.size,
-          content_type: file.type || 'application/octet-stream'
-        })
+      const result = await uploadFile(fileInfo, (progressData) => {
+        setProgress(progressData.percentage);
       });
 
-      if (!initResponse.ok) throw new Error('Falha ao iniciar upload');
-
-      const { upload_id, key } = await initResponse.json();
-
-      // 2. Upload em chunks
-      const chunkSize = 10 * 1024 * 1024; // 10MB por chunk
-      const chunks = Math.ceil(file.size / chunkSize);
-      const uploadedParts = [];
-
-      for (let i = 0; i < chunks; i++) {
-        const start = i * chunkSize;
-        const end = Math.min(start + chunkSize, file.size);
-        const chunk = file.slice(start, end);
-
-        // Obter URL assinada para este chunk
-        const urlResponse = await fetch(`${API_BASE}/api/color-studio/upload/raw/part-url`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            key,
-            upload_id,
-            part_number: i + 1
-          })
-        });
-
-        const { upload_url } = await urlResponse.json();
-
-        // Upload do chunk
-        const uploadResponse = await fetch(upload_url, {
-          method: 'PUT',
-          body: chunk,
-          headers: {
-            'Content-Type': file.type || 'application/octet-stream'
-          }
-        });
-
-        const etag = uploadResponse.headers.get('ETag');
-        uploadedParts.push({
-          PartNumber: i + 1,
-          ETag: etag
-        });
-
-        // Atualizar progresso
-        setUploadProgress(Math.round(((i + 1) / chunks) * 100));
-      }
-
-      // 3. Completar upload multipart
-      const completeResponse = await fetch(`${API_BASE}/api/color-studio/upload/raw/complete`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          key,
-          upload_id,
-          parts: uploadedParts
-        })
-      });
-
-      if (!completeResponse.ok) throw new Error('Falha ao completar upload');
-
-      const { r2_url } = await completeResponse.json();
-
-      setUploadStatus('converting');
-
-      // 4. Iniciar conversão para H.265
-      const convertResponse = await fetch(`${API_BASE}/api/color-studio/convert/raw`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          r2_key: key,
-          filename: file.name
-        })
-      });
-
-      if (!convertResponse.ok) throw new Error('Falha ao iniciar conversão');
-
-      const { job_id, video_id } = await convertResponse.json();
-      setVideoId(video_id);
-
-      // 5. Monitorar status da conversão
-      monitorConversion(job_id);
-
+      console.log('✅ Upload successful:', result);
+      alert('Upload concluído com sucesso!');
+      setUploadStatus('completed');
     } catch (err) {
-      console.error('Erro no upload:', err);
-      setError(err.message);
+      console.error('❌ Upload failed:', err);
+      setError(err.message || 'Erro no upload');
       setUploadStatus('error');
+      alert('Erro no upload: ' + err.message);
+    } finally {
+      setUploading(false);
     }
   };
 
-  const monitorConversion = async (jobId) => {
-    const checkStatus = async () => {
-      try {
-        const response = await fetch(`${API_BASE}/api/color-studio/convert/status/${jobId}`);
-        const status = await response.json();
-
-        setConversionStatus(status);
-
-        if (status.status === 'completed') {
-          setUploadStatus('completed');
-          setShowTimeline(true);
-        } else if (status.status === 'failed') {
-          setUploadStatus('error');
-          setError('Conversão falhou');
-        } else {
-          setTimeout(checkStatus, 3000);
-        }
-      } catch (err) {
-        console.error('Erro ao verificar status:', err);
-      }
-    };
-
-    checkStatus();
-  };
-
   const resetUpload = () => {
-    setFile(null);
     setFileInfo(null);
-    setUploadProgress(0);
-    setUploadStatus('idle');
-    setVideoId(null);
-    setConversionStatus(null);
+    setUploading(false);
+    setProgress(0);
     setError(null);
-    setShowTimeline(false);
+    setUploadStatus('idle');
   };
 
   return (
@@ -240,7 +116,7 @@ export default function ColorStudioPro() {
 
         {/* Main Upload Area */}
         <div className="max-w-5xl mx-auto">
-          {!showTimeline ? (
+          {
             <div className="bg-gray-900/30 backdrop-blur rounded-lg border border-gray-800 p-6">
               
               {uploadStatus === 'idle' && (
@@ -322,7 +198,7 @@ export default function ColorStudioPro() {
 
                   <div className="flex gap-3">
                     <button
-                      onClick={startUpload}
+                      onClick={handleUpload}
                       disabled={uploadStatus === 'analyzing'}
                       className="flex-1 px-5 py-3 bg-blue-600 rounded-lg font-medium text-sm hover:bg-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     >
@@ -344,12 +220,12 @@ export default function ColorStudioPro() {
                   <div className="mb-4">
                     <div className="flex justify-between mb-2 text-sm">
                       <span className="text-gray-400">Progresso</span>
-                      <span className="font-semibold text-blue-400">{uploadProgress}%</span>
+                      <span className="font-semibold text-blue-400">{progress}%</span>
                     </div>
                     <div className="w-full bg-gray-800 rounded-full h-2 overflow-hidden">
                       <div
                         className="h-full bg-gradient-to-r from-blue-500 to-blue-600 transition-all duration-300"
-                        style={{ width: `${uploadProgress}%` }}
+                        style={{ width: `${progress}%` }}
                       />
                     </div>
                   </div>
@@ -369,7 +245,7 @@ export default function ColorStudioPro() {
                   <p className="text-gray-500 text-sm mb-4">
                     Seu arquivo RAW está sendo processado
                   </p>
-                  {conversionStatus && (
+                  {/* {conversionStatus && (
                     <div className="bg-black/40 rounded-lg p-3 border border-gray-800 inline-block">
                       <p className="text-xs text-gray-400">Status: {conversionStatus.status}</p>
                       {conversionStatus.progress && (
@@ -378,7 +254,7 @@ export default function ColorStudioPro() {
                         </p>
                       )}
                     </div>
-                  )}
+                  )} */}
                 </div>
               )}
 
@@ -398,14 +274,28 @@ export default function ColorStudioPro() {
                 </div>
               )}
 
+              {uploadStatus === 'completed' && (
+                <div className="text-center py-8">
+                  <div className="w-16 h-16 mx-auto mb-4 bg-green-900/20 rounded-full flex items-center justify-center border border-green-800">
+                    <span className="text-3xl">✅</span>
+                  </div>
+                  <h3 className="text-xl font-semibold mb-2 text-green-400">Upload Concluído!</h3>
+                  <p className="text-gray-400 text-sm mb-6">Seu arquivo foi enviado e está pronto para processamento.</p>
+                  <button
+                    onClick={resetUpload}
+                    className="px-6 py-3 bg-blue-600 rounded-lg font-medium text-sm hover:bg-blue-700 transition-all"
+                  >
+                    Fazer Novo Upload
+                  </button>
+                </div>
+              )}
+
             </div>
-          ) : (
-            <TimelineView videoId={videoId} onBack={resetUpload} />
-          )}
+          }
         </div>
 
         {/* Features */}
-        {!showTimeline && (
+        {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-8 max-w-5xl mx-auto">
             <div className="bg-gray-900/20 backdrop-blur rounded-lg p-4 border border-gray-800">
               <div className="text-2xl mb-2">🎬</div>
@@ -420,32 +310,14 @@ export default function ColorStudioPro() {
             <div className="bg-gray-900/20 backdrop-blur rounded-lg p-4 border border-gray-800">
               <div className="text-2xl mb-2">☁️</div>
               <h4 className="font-semibold text-sm mb-1">Cloud Streaming</h4>
-              <p className="text-xs text-gray-500">Cloudflare Stream integrado</p>
+              <p className="text-xs text-gray-500">Acesso instantâneo e seguro</p>
             </div>
           </div>
-        )}
-
-        {/* Footer */}
-        <footer className="text-center text-gray-600 text-xs mt-12">
-          <p>&copy; 2023 Color Studio Pro. Todos os direitos reservados.</p>
-        </footer>
+        }
       </div>
     </div>
   );
 }
 
-// Componente TimelineView (placeholder por enquanto)
-const TimelineView = ({ videoId, onBack }) => {
-  return (
-    <div className="bg-gray-900/30 backdrop-blur rounded-lg border border-gray-800 p-6 text-center">
-      <h2 className="text-2xl font-semibold mb-4">Timeline View para {videoId}</h2>
-      <p className="text-gray-400 mb-6">Aqui você poderá editar e visualizar seu vídeo.</p>
-      <button
-        onClick={onBack}
-        className="px-6 py-3 bg-blue-600 rounded-lg font-medium text-sm hover:bg-blue-700 transition-all"
-      >
-        Voltar
-      </button>
-    </div>
-  );
-};
+export default ColorStudio;
+
