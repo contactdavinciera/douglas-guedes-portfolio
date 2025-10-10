@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Upload, X, CheckCircle, AlertCircle, FileVideo, Loader } from 'lucide-react';
 import { Button } from './ui/button';
 import streamApi from '../services/streamApi';
@@ -14,7 +14,8 @@ const StreamUploader = ({
   className = ""
 }) => {
   console.log('StreamUploader: Renderizando com props:', { maxDurationSeconds, acceptedFormats });
-  const [uploadState, setUploadState] = useState('idle'); // 'idle', 'uploading', 'success', 'error'
+
+  const [uploadState, setUploadState] = useState('idle');
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadedFile, setUploadedFile] = useState(null);
   const [uploadError, setUploadError] = useState(null);
@@ -23,7 +24,16 @@ const StreamUploader = ({
   const fileInputRef = useRef(null);
   const uploadRef = useRef(null);
 
-  // Detectar formato e metadados do arquivo
+  // DEBUG: Monitorar mudanças de estado
+  useEffect(() => {
+    console.log('🔍 StreamUploader STATE CHANGED:', {
+      uploadState,
+      videoIdForPreview,
+      hasMetadata: !!videoMetadata,
+      shouldShowPreview: uploadState === 'success' && !!videoIdForPreview
+    });
+  }, [uploadState, videoIdForPreview, videoMetadata]);
+
   const analyzeFile = useCallback((file) => {
     console.log('StreamUploader: analyzeFile acionado para:', file.name);
     const extension = file.name.split('.').pop().toLowerCase();
@@ -38,7 +48,6 @@ const StreamUploader = ({
     };
 
     const fileInfo = formats[extension] || { format: 'Unknown', colorSpace: 'Unknown', isRaw: false };
-    
     const metadata = {
       name: file.name,
       size: file.size,
@@ -46,13 +55,11 @@ const StreamUploader = ({
       lastModified: file.lastModified,
       ...fileInfo
     };
+
     console.log('StreamUploader: Metadados do arquivo analisados:', metadata);
     return metadata;
   }, []);
 
-
-
-  // Processar upload de arquivo
   const handleFileUpload = async (file) => {
     console.log('StreamUploader: handleFileUpload acionado para:', file.name);
     try {
@@ -60,37 +67,38 @@ const StreamUploader = ({
       setUploadProgress(0);
       setUploadError(null);
       setUploadedFile(file);
-      
+      setVideoIdForPreview(null); // Limpar preview anterior
+
       const metadata = analyzeFile(file);
       setVideoMetadata(metadata);
-      console.log('StreamUploader: Estado de upload definido para "uploading".');
 
-      // Obter URL de upload do backend
-      console.log('StreamUploader: Solicitando URL de upload...');
-      // Usar a nova função de upload de arquivo grande
+      console.log('StreamUploader: Estado de upload definido para "uploading".');
       console.log("StreamUploader: Iniciando upload de arquivo grande via proxy...");
+
       const uploadResult = await streamApi.uploadLargeFile(file, (progress, uploaded, total) => {
         setUploadProgress(progress);
         onUploadProgress?.(progress, uploaded, total);
-        // console.log('StreamUploader: Progresso de upload TUS:', progress);
       });
 
-      // Aguardar processamento do vídeo
       setUploadProgress(100);
       console.log('StreamUploader: Upload concluído, aguardando processamento do vídeo...');
-      
-      // Extrair videoId do resultado do upload
+
       const videoId = uploadResult.uid || uploadResult.videoId;
       if (!videoId) {
         throw new Error('ID do vídeo não retornado pelo upload');
       }
+
+      console.log('StreamUploader: VideoId obtido:', videoId);
       
+      // Definir videoId ANTES de esperar processamento
+      setVideoIdForPreview(videoId);
+
       const processedVideo = await streamApi.waitForProcessing(videoId);
       console.log('StreamUploader: Vídeo processado. Dados:', processedVideo);
-      
+
       const result = {
         videoId,
-        customerCode: "5dr3ublgoe3wg2wj", // Adicionado o customerCode
+        customerCode: "5dr3ublgoe3wg2wj",
         uploadUrl: processedVideo.streamUrl || processedVideo.playback?.hls,
         metadata: {
           ...metadata,
@@ -99,26 +107,26 @@ const StreamUploader = ({
           duration: processedVideo.duration
         }
       };
-      
-      // Definir o videoId para preview ANTES de mudar o uploadState para 'success'
-      setVideoIdForPreview(result.videoId);
+
       setVideoMetadata(result.metadata);
       setUploadedFile(result);
       
-      // Só depois definir o estado como 'success' para garantir que a renderização condicional funcione
+      // Definir success por último
+      console.log('StreamUploader: Definindo uploadState para "success"');
       setUploadState("success");
+      
       onUploadComplete?.(result);
       console.log("StreamUploader: Upload bem-sucedido. Resultado:", result);
-      
+
     } catch (error) {
       console.error('StreamUploader: Erro no upload:', error);
       setUploadError(error.message);
       setUploadState('error');
+      setVideoIdForPreview(null);
       onUploadError?.(error);
     }
   };
 
-  // Manipular seleção de arquivo
   const handleFileSelect = (event) => {
     console.log('StreamUploader: handleFileSelect acionado.');
     const file = event.target.files[0];
@@ -127,7 +135,6 @@ const StreamUploader = ({
     }
   };
 
-  // Manipular drag and drop
   const handleDrop = (event) => {
     console.log('StreamUploader: handleDrop acionado.');
     event.preventDefault();
@@ -141,7 +148,6 @@ const StreamUploader = ({
     event.preventDefault();
   };
 
-  // Cancelar upload
   const cancelUpload = () => {
     console.log('StreamUploader: cancelUpload acionado.');
     if (uploadRef.current) {
@@ -152,9 +158,9 @@ const StreamUploader = ({
     setUploadedFile(null);
     setUploadError(null);
     setVideoMetadata(null);
+    setVideoIdForPreview(null);
   };
 
-  // Reset para novo upload
   const resetUpload = () => {
     console.log('StreamUploader: resetUpload acionado.');
     setUploadState('idle');
@@ -162,9 +168,9 @@ const StreamUploader = ({
     setUploadedFile(null);
     setUploadError(null);
     setVideoMetadata(null);
+    setVideoIdForPreview(null);
   };
 
-  // Formatação de tamanho de arquivo
   const formatFileSize = (bytes) => {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
@@ -173,24 +179,32 @@ const StreamUploader = ({
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-  console.log('StreamUploader: Renderizando com uploadState:', uploadState);
+  console.log('StreamUploader: Renderizando com uploadState:', uploadState, 'videoId:', videoIdForPreview);
+
   return (
-    <div className={`w-full ${className}`}>
+    <div className={`w-full max-w-4xl mx-auto p-6 ${className}`}>
       {uploadState === 'idle' && (
         <div
-          className="border-2 border-dashed border-gray-600 rounded-xl p-8 text-center hover:border-gray-500 transition-colors cursor-pointer"
           onDrop={handleDrop}
           onDragOver={handleDragOver}
           onClick={() => fileInputRef.current?.click()}
+          className="border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg p-12 text-center cursor-pointer hover:border-purple-500 transition-colors"
         >
-          <Upload className="mx-auto mb-4 text-gray-400" size={48} />
-          <h3 className="text-lg font-semibold mb-2">Upload de Vídeo</h3>
-          <p className="text-gray-400 mb-4">
+          <Upload className="w-16 h-16 mx-auto mb-4 text-gray-400" />
+          <h3 className="text-xl font-semibold mb-2">Upload de Vídeo</h3>
+          <p className="text-gray-600 dark:text-gray-400 mb-4">
             Arraste e solte seu arquivo aqui ou clique para selecionar
           </p>
           <p className="text-sm text-gray-500">
             Suporta: MP4, MOV, BRAW, R3D, ALEXA, Sony MXF, Cinema DNG
           </p>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept={acceptedFormats.join(',')}
+            onChange={handleFileSelect}
+            className="hidden"
+          />
           <Button className="mt-4">
             Selecionar Arquivo
           </Button>
@@ -198,50 +212,49 @@ const StreamUploader = ({
       )}
 
       {uploadState === 'uploading' && (
-        <div className="bg-gray-800/50 rounded-xl p-6 border border-gray-700">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center space-x-3">
-              <FileVideo className="text-blue-400" size={24} />
-              <div>
-                <h3 className="font-semibold">{uploadedFile?.name}</h3>
-                <p className="text-sm text-gray-400">
-                  {formatFileSize(uploadedFile?.size)} • {videoMetadata?.format}
-                </p>
-              </div>
+        <div className="space-y-4">
+          <div className="flex items-center space-x-4">
+            <FileVideo className="w-12 h-12 text-purple-500" />
+            <div className="flex-1">
+              <h3 className="font-semibold">{uploadedFile?.name}</h3>
+              <p className="text-sm text-gray-600">
+                {formatFileSize(uploadedFile?.size)} • {videoMetadata?.format}
+              </p>
             </div>
-            <button
-              onClick={cancelUpload}
-              className="p-2 hover:bg-gray-700 rounded-lg transition-colors"
-              title="Cancelar upload"
-            >
-              <X size={20} />
-            </button>
           </div>
-
-          <div className="mb-4">
-            <div className="flex justify-between text-sm mb-2">
+          <div className="space-y-2">
+            <div className="flex justify-between text-sm">
               <span>Progresso do upload</span>
               <span>{uploadProgress}%</span>
             </div>
-            <div className="w-full bg-gray-700 rounded-full h-2">
-              <div 
-                className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+            <div className="w-full bg-gray-200 rounded-full h-2">
+              <div
+                className="bg-purple-500 h-2 rounded-full transition-all duration-300"
                 style={{ width: `${uploadProgress}%` }}
               />
             </div>
           </div>
-
-          <div className="flex items-center space-x-2 text-sm text-gray-400">
-            <Loader className="animate-spin" size={16} />
+          <div className="flex items-center justify-center space-x-2 text-gray-600">
+            <Loader className="w-4 h-4 animate-spin" />
             <span>Enviando para o Ateliê de Cores...</span>
           </div>
+          <Button onClick={cancelUpload} variant="outline" className="w-full">
+            Cancelar
+          </Button>
         </div>
       )}
 
       {uploadState === 'success' && videoIdForPreview && (
         <div className="space-y-6">
+          {/* DEBUG INFO */}
+          <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800">
+            <p className="text-xs font-mono">
+              <strong>Debug:</strong> State={uploadState} | VideoID={videoIdForPreview}
+            </p>
+          </div>
+
           {/* Video Player */}
-          <div className="relative w-full aspect-video bg-black rounded-lg overflow-hidden">
+          <div className="relative w-full aspect-video bg-black rounded-lg overflow-hidden shadow-2xl">
             <iframe
               src={`https://customer-5dr3ublgoe3wg2wj.cloudflarestream.com/${videoIdForPreview}/iframe`}
               style={{
@@ -257,7 +270,7 @@ const StreamUploader = ({
             />
           </div>
 
-          {/* Upload Info */}
+          {/* Upload Success Message */}
           <div className="flex items-center justify-center p-6 bg-green-50 dark:bg-green-900/20 rounded-lg border-2 border-green-500">
             <CheckCircle className="w-10 h-10 text-green-500 mr-4" />
             <div>
@@ -265,7 +278,7 @@ const StreamUploader = ({
                 Upload Concluído!
               </h3>
               <p className="text-sm text-green-600 dark:text-green-500">
-                {uploadedFile?.name || 'Vídeo'} foi enviado com sucesso
+                {videoMetadata?.name || 'Vídeo'} foi enviado com sucesso
               </p>
             </div>
           </div>
@@ -273,7 +286,7 @@ const StreamUploader = ({
           {/* Video Metadata */}
           {videoMetadata && (
             <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg space-y-2">
-              <h4 className="font-semibold text-sm text-700 dark:text-gray-300">
+              <h4 className="font-semibold text-sm text-gray-700 dark:text-gray-300">
                 Informações do Arquivo
               </h4>
               <div className="grid grid-cols-2 gap-3 text-sm">
@@ -323,35 +336,29 @@ const StreamUploader = ({
         </div>
       )}
 
-
       {uploadState === 'error' && (
-        <div className="bg-red-900/20 border border-red-500/30 rounded-xl p-6">
-          <div className="flex items-center space-x-3 mb-4">
-            <AlertCircle className="text-red-400" size={24} />
+        <div className="space-y-4">
+          <div className="flex items-center justify-center p-8 bg-red-50 dark:bg-red-900/20 rounded-lg border-2 border-red-500">
+            <AlertCircle className="w-12 h-12 text-red-500 mr-4" />
             <div>
-              <h3 className="font-semibold text-red-400">Erro no Upload</h3>
-              <p className="text-sm text-gray-400">{uploadError}</p>
+              <h3 className="text-lg font-semibold text-red-700 dark:text-red-400">
+                Erro no Upload
+              </h3>
+              <p className="text-sm text-red-600 dark:text-red-500">
+                {uploadError}
+              </p>
             </div>
           </div>
-
-          <div className="flex space-x-3">
-            <Button onClick={() => handleFileUpload(uploadedFile)} variant="outline">
+          <div className="flex space-x-4">
+            <Button onClick={() => handleFileUpload(uploadedFile)} variant="outline" className="flex-1">
               Tentar Novamente
             </Button>
-            <Button onClick={resetUpload} variant="outline">
+            <Button onClick={resetUpload} className="flex-1">
               Selecionar Outro Arquivo
             </Button>
           </div>
         </div>
       )}
-
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept={acceptedFormats.join(',')}
-        onChange={handleFileSelect}
-        className="hidden"
-      />
     </div>
   );
 };
