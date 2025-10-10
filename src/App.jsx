@@ -8,6 +8,8 @@ import Services from './pages/Services'
 import Contact from './pages/Contact'
 import ColorStudio from './pages/ColorStudio'
 import ClientDashboard from './pages/ClientDashboard'
+import ColoristDashboardPage from './pages/ColoristDashboard'
+import BatchPricingCalculatorPage from './pages/BatchPricingCalculatorPage'
 import './App.css'
 
 console.log('App.jsx loaded - Version 2.2'); // Para verificar o deploy
