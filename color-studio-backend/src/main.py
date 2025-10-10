@@ -146,12 +146,38 @@ def create_app():
     except ImportError as e:
         print(f"⚠️ Warning: Could not import models: {e}")
 
-    from src.routes.user import user_bp
+    # Importar blueprints (com try/except para rotas opcionais)
     from src.routes.color_studio import color_studio_bp
-    from src.routes.upload_routes import upload_bp
-    from src.routes.pricing_routes import pricing_bp
-    from src.routes.colorist_routes import colorist_bp
-    from src.routes.conversion import conversion_bp
+    
+    try:
+        from src.routes.user import user_bp
+    except ImportError:
+        user_bp = None
+        print("⚠️ Warning: user routes not found")
+    
+    try:
+        from src.routes.upload_routes import upload_bp
+    except ImportError:
+        upload_bp = None
+        print("⚠️ Warning: upload_routes not found")
+    
+    try:
+        from src.routes.pricing_routes import pricing_bp
+    except ImportError:
+        pricing_bp = None
+        print("⚠️ Warning: pricing_routes not found")
+    
+    try:
+        from src.routes.colorist_routes import colorist_bp
+    except ImportError:
+        colorist_bp = None
+        print("⚠️ Warning: colorist_routes not found")
+    
+    try:
+        from src.routes.conversion_routes import conversion_bp
+    except ImportError:
+        conversion_bp = None
+        print("⚠️ Warning: conversion_routes not found")
 
     # ==========================================
     # REGISTRAR BLUEPRINTS
