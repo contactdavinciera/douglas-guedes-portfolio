@@ -83,8 +83,9 @@ def create_app():
 
     return app
 
+app = create_app()
+
 if __name__ == '__main__':
-    app = create_app()
     # O modo debug é ativado pela variável de ambiente FLASK_DEBUG=1
     app.run(host='0.0.0.0', port=5001, debug=os.getenv('FLASK_DEBUG') == '1')
 
