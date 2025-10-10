@@ -15,6 +15,7 @@ from src.routes.user import user_bp
 from src.routes.color_studio import color_studio_bp
 from src.routes.upload_routes import upload_bp
 from src.routes.pricing_routes import pricing_bp
+from src.routes.colorist_routes import colorist_bp
 
 from flask_cors import CORS
 
@@ -34,7 +35,8 @@ app.config['SECRET_KEY'] = 'asdf#FGSgvasgf$5$WGT'
 app.register_blueprint(user_bp, url_prefix=\"/api\")
 app.register_blueprint(color_studio_bp, url_prefix=\"/api/color-studio\")
 app.register_blueprint(upload_bp, url_prefix=\"/api/upload\")
-app.register_blueprint(pricing_bp, url_prefix=\'/api/pricing\')
+app.register_blueprint(pricing_bp, url_prefix=\"/api/pricing\")
+app.register_blueprint(colorist_bp, url_prefix=\"/api/colorist\")
 # uncomment if you need to use database
 app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{os.path.join(os.path.dirname(__file__), 'database', 'app.db')}"
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
