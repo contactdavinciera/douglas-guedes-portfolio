@@ -268,7 +268,7 @@ def get_video_status():
 
 from src.services.r2_upload_service import R2UploadService
 
-@color_studio_bp.route("/upload-raw-init", methods=["POST"])
+@color_studio_bp.route("/upload/raw/init", methods=["POST"])
 def init_raw_upload():
     """
     Inicia upload de arquivo RAW para R2
@@ -317,6 +317,37 @@ def init_raw_upload():
         return jsonify({"success": False, "error": str(e)}), 500
 
 
+@color_studio_bp.route("/upload/raw/part-url", methods=["POST"])
+def get_raw_part_url():
+    """
+    Obtém URL assinada para upload de uma parte do arquivo RAW
+    """
+    try:
+        data = request.get_json() or {}
+        upload_id = data.get("upload_id")
+        key = data.get("key")
+        part_number = int(data.get("part_number", 1))
+        
+        if not all([upload_id, key, part_number]):
+            return jsonify({"success": False, "error": "Dados incompletos"}), 400
+        
+        # Gerar URL assinada para a parte
+        r2_service = R2UploadService()
+        result = r2_service.generate_presigned_upload_url(
+            upload_id=upload_id,
+            key=key,
+            part_number=part_number
+        )
+        
+        return jsonify(result), 200 if result["success"] else 500
+        
+    except Exception as e:
+        print(f"❌ Erro ao gerar URL da parte: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
 @color_studio_bp.route("/upload-raw-part", methods=["POST"])
 def upload_raw_part():
     """
@@ -351,7 +382,7 @@ def upload_raw_part():
         return jsonify({"success": False, "error": str(e)}), 500
 
 
-@color_studio_bp.route("/upload-raw-complete", methods=["POST"])
+@color_studio_bp.route("/upload/raw/complete", methods=["POST"])
 def complete_raw_upload():
     """
     Finaliza upload RAW
@@ -413,3 +444,62 @@ def abort_raw_upload():
         print(f"❌ Erro ao cancelar upload: {str(e)}")
         return jsonify({"success": False, "error": str(e)}), 500
 
+
+
+@color_studio_bp.route("/convert/raw", methods=["POST"])
+def convert_raw_file():
+    """
+    Inicia conversão de arquivo RAW para H.265
+    """
+    try:
+        data = request.get_json() or {}
+        r2_key = data.get("r2_key")
+        filename = data.get("filename")
+        
+        if not all([r2_key, filename]):
+            return jsonify({"success": False, "error": "r2_key e filename são obrigatórios"}), 400
+        
+        # Gerar job_id único
+        job_id = str(uuid.uuid4())
+        
+        # Simular conversão (em produção, isso seria um job assíncrono)
+        # Por enquanto, retornar sucesso imediato
+        video_id = str(uuid.uuid4())
+        
+        return jsonify({
+            "success": True,
+            "job_id": job_id,
+            "video_id": video_id,
+            "status": "processing"
+        }), 200
+        
+    except Exception as e:
+        print(f"❌ Erro ao iniciar conversão: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@color_studio_bp.route("/convert/status/<job_id>", methods=["GET"])
+def get_conversion_status(job_id):
+    """
+    Verifica o status da conversão
+    """
+    try:
+        # Simular status de conversão
+        # Em produção, isso consultaria um banco de dados ou serviço de jobs
+        
+        # Para teste, simular que a conversão está completa
+        return jsonify({
+            "success": True,
+            "status": "completed",
+            "progress": 100,
+            "job_id": job_id,
+            "video_url": f"https://example.com/video/{job_id}.mp4"
+        }), 200
+        
+    except Exception as e:
+        print(f"❌ Erro ao verificar status da conversão: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"success": False, "error": str(e)}), 500

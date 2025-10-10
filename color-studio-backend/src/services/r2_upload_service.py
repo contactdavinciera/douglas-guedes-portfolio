@@ -358,3 +358,45 @@ class R2UploadService:
                 'error': str(e)
             }
 
+
+    def generate_presigned_upload_url(self, upload_id, key, part_number):
+        """
+        Gera URL assinada para upload de uma parte específica
+        """
+        # Modo de teste - simular URL
+        if self.test_mode:
+            url = f"https://test.r2.cloudflarestorage.com/{self.bucket_name}/{key}?uploadId={upload_id}&partNumber={part_number}&test=true"
+            print(f"🧪 [TEST MODE] Gerando URL presigned de upload simulada para parte {part_number}")
+            return {"success": True, "upload_url": url}
+        
+        try:
+            url = self.s3_client.generate_presigned_url(
+                'upload_part',
+                Params={
+                    'Bucket': self.bucket_name,
+                    'Key': key,
+                    'UploadId': upload_id,
+                    'PartNumber': part_number
+                },
+                ExpiresIn=3600  # 1 hora
+            )
+            
+            print(f"✅ Presigned upload URL gerada para parte {part_number}: {key}")
+            
+            return {
+                'success': True,
+                'upload_url': url
+            }
+            
+        except ClientError as e:
+            print(f"❌ Erro ao gerar presigned upload URL: {e}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
+        except Exception as e:
+            print(f"❌ Erro inesperado ao gerar presigned upload URL: {e}")
+            return {
+                'success': False,
+                'error': str(e)
+            }
