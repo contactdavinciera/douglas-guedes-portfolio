@@ -264,3 +264,152 @@ def get_video_status():
         traceback.print_exc()
         return jsonify({"success": False, "error": f"Erro interno do servidor: {str(e)}"}), 500
 
+
+
+from src.services.r2_upload_service import R2UploadService
+
+@color_studio_bp.route("/upload-raw-init", methods=["POST"])
+def init_raw_upload():
+    """
+    Inicia upload de arquivo RAW para R2
+    """
+    try:
+        data = request.get_json() or {}
+        filename = data.get("fileName")
+        file_size = data.get("fileSize", 0)
+        
+        if not filename:
+            return jsonify({"success": False, "error": "fileName é obrigatório"}), 400
+        
+        # Verificar se é formato RAW
+        if not R2UploadService.is_raw_format(filename):
+            return jsonify({
+                "success": False,
+                "error": f"Formato não é RAW. Use /upload-url para vídeos normais."
+            }), 400
+        
+        # Iniciar upload no R2
+        r2_service = R2UploadService()
+        result = r2_service.create_multipart_upload(
+            filename=filename,
+            metadata={
+                "original_name": filename,
+                "file_size": str(file_size),
+                "upload_date": datetime.utcnow().isoformat()
+            }
+        )
+        
+        if result["success"]:
+            return jsonify({
+                "success": True,
+                "uploadId": result["upload_id"],
+                "key": result["key"],
+                "bucket": result["bucket"],
+                "storage": "r2"
+            }), 200
+        else:
+            return jsonify(result), 500
+            
+    except Exception as e:
+        print(f"❌ Erro ao iniciar upload RAW: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@color_studio_bp.route("/upload-raw-part", methods=["POST"])
+def upload_raw_part():
+    """
+    Faz upload de uma parte do arquivo RAW
+    """
+    try:
+        upload_id = request.form.get("uploadId")
+        key = request.form.get("key")
+        part_number = int(request.form.get("partNumber", 1))
+        
+        if "file" not in request.files:
+            return jsonify({"success": False, "error": "Arquivo não enviado"}), 400
+        
+        file_part = request.files["file"]
+        data = file_part.read()
+        
+        # Upload da parte
+        r2_service = R2UploadService()
+        result = r2_service.upload_part(
+            upload_id=upload_id,
+            key=key,
+            part_number=part_number,
+            data=data
+        )
+        
+        return jsonify(result), 200 if result["success"] else 500
+        
+    except Exception as e:
+        print(f"❌ Erro ao fazer upload da parte: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@color_studio_bp.route("/upload-raw-complete", methods=["POST"])
+def complete_raw_upload():
+    """
+    Finaliza upload RAW
+    """
+    try:
+        data = request.get_json() or {}
+        upload_id = data.get("uploadId")
+        key = data.get("key")
+        parts = data.get("parts", [])  # [{"PartNumber": 1, "ETag": "xxx"}, ...]
+        
+        if not all([upload_id, key, parts]):
+            return jsonify({"success": False, "error": "Dados incompletos"}), 400
+        
+        # Completar upload
+        r2_service = R2UploadService()
+        result = r2_service.complete_multipart_upload(
+            upload_id=upload_id,
+            key=key,
+            parts=parts
+        )
+        
+        if result["success"]:
+            # Gerar presigned URL para download
+            download_result = r2_service.generate_presigned_url(key, expiration=86400)  # 24h
+            
+            return jsonify({
+                "success": True,
+                "url": result["url"],
+                "key": result["key"],
+                "downloadUrl": download_result.get("url"),
+                "storage": "r2"
+            }), 200
+        else:
+            return jsonify(result), 500
+            
+    except Exception as e:
+        print(f"❌ Erro ao completar upload RAW: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@color_studio_bp.route("/upload-raw-abort", methods=["POST"])
+def abort_raw_upload():
+    """
+    Cancela upload RAW
+    """
+    try:
+        data = request.get_json() or {}
+        upload_id = data.get("uploadId")
+        key = data.get("key")
+        
+        r2_service = R2UploadService()
+        result = r2_service.abort_multipart_upload(upload_id, key)
+        
+        return jsonify(result), 200 if result["success"] else 500
+        
+    except Exception as e:
+        print(f"❌ Erro ao cancelar upload: {str(e)}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
