@@ -1,15 +1,10 @@
-'''
-Entry point for the Flask application.
-
-This file creates and configures the Flask app, initializes extensions like SQLAlchemy,
-and registers the blueprints for different parts of the application.
-'''
 
 import os
 import sys
 from dotenv import load_dotenv
 from flask import Flask, send_from_directory
 from flask_cors import CORS
+from flask_sqlalchemy import SQLAlchemy
 
 # Carregar variáveis de ambiente do .env
 load_dotenv()
@@ -17,10 +12,10 @@ load_dotenv()
 # Adicionar o diretório raiz do projeto ao sys.path para importações absolutas
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-# Importar a instância do db centralizada
-from src.models import db
+# Inicializar SQLAlchemy aqui para evitar importações circulares
+db = SQLAlchemy()
 
-# Importar os modelos para que o SQLAlchemy possa encontrá-los
+# Importar os modelos para que o SQLAlchemy possa encontrá-los e usar a instância `db`
 from src.models.user import User
 from src.models.project import Project
 from src.models.media_file import MediaFile

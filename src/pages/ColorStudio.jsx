@@ -1,390 +1,451 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import RawUploader from '../components/ColorStudio/RawUploader';
+import React, { useState, useRef } from 'react';
 
-const ColorStudio = () => {
-  const { mediaFileId } = useParams();
-  const navigate = useNavigate();
-  const [mediaFile, setMediaFile] = useState(null);
-  const [loading, setLoading] = useState(false);
+export default function ColorStudioPro() {
+  const [file, setFile] = useState(null);
+  const [fileInfo, setFileInfo] = useState(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadStatus, setUploadStatus] = useState('idle');
+  const [videoId, setVideoId] = useState(null);
+  const [conversionStatus, setConversionStatus] = useState(null);
   const [error, setError] = useState(null);
-  const [showUploader, setShowUploader] = useState(!mediaFileId);
+  const [showTimeline, setShowTimeline] = useState(false);
 
-  useEffect(() => {
-    if (mediaFileId) {
-      loadMediaFile();
+  const API_BASE = 'https://douglas-guedes-portfolio.onrender.com';
+
+  // Formatos RAW suportados
+  const RAW_FORMATS = ['.braw', '.r3d', '.ari', '.mxf', '.dpx', '.exr'];
+
+  const formatFileSize = (bytes) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+  };
+
+  const formatDuration = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const handleFileSelect = async (e) => {
+    const selectedFile = e.target.files[0];
+    if (!selectedFile) return;
+
+    setFile(selectedFile);
+    setError(null);
+    setUploadStatus('analyzing');
+
+    // Análise básica do arquivo
+    const info = {
+      name: selectedFile.name,
+      size: selectedFile.size,
+      type: selectedFile.type || 'application/octet-stream',
+      extension: '.' + selectedFile.name.split('.').pop().toLowerCase(),
+      isRaw: RAW_FORMATS.some(format => 
+        selectedFile.name.toLowerCase().endsWith(format)
+      )
+    };
+
+    // Tentar obter duração do vídeo (se possível)
+    if (selectedFile.type.startsWith('video/')) {
+      try {
+        const video = document.createElement('video');
+        video.preload = 'metadata';
+        video.src = URL.createObjectURL(selectedFile);
+        
+        await new Promise((resolve) => {
+          video.onloadedmetadata = () => {
+            info.duration = video.duration;
+            info.width = video.videoWidth;
+            info.height = video.videoHeight;
+            URL.revokeObjectURL(video.src);
+            resolve();
+          };
+        });
+      } catch (err) {
+        console.log('Não foi possível extrair metadados:', err);
+      }
     }
-  }, [mediaFileId]);
 
-  const loadMediaFile = async () => {
+    setFileInfo(info);
+    setUploadStatus('ready');
+  };
+
+  const startUpload = async () => {
+    if (!file || !fileInfo) return;
+
+    setUploadStatus('uploading');
+    setError(null);
+
     try {
-      setLoading(true);
-      const response = await fetch(`/api/conversion/conversion-status/${mediaFileId}`);
-      const data = await response.json();
+      // 1. Iniciar upload multipart
+      const initResponse = await fetch(`${API_BASE}/api/color-studio/upload/raw/init`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          filename: file.name,
+          filesize: file.size,
+          content_type: file.type || 'application/octet-stream'
+        })
+      });
 
-      if (!data.success) {
-        throw new Error(data.error || 'Erro ao carregar arquivo');
+      if (!initResponse.ok) throw new Error('Falha ao iniciar upload');
+
+      const { upload_id, key } = await initResponse.json();
+
+      // 2. Upload em chunks
+      const chunkSize = 10 * 1024 * 1024; // 10MB por chunk
+      const chunks = Math.ceil(file.size / chunkSize);
+      const uploadedParts = [];
+
+      for (let i = 0; i < chunks; i++) {
+        const start = i * chunkSize;
+        const end = Math.min(start + chunkSize, file.size);
+        const chunk = file.slice(start, end);
+
+        // Obter URL assinada para este chunk
+        const urlResponse = await fetch(`${API_BASE}/api/color-studio/upload/raw/part-url`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            key,
+            upload_id,
+            part_number: i + 1
+          })
+        });
+
+        const { upload_url } = await urlResponse.json();
+
+        // Upload do chunk
+        const uploadResponse = await fetch(upload_url, {
+          method: 'PUT',
+          body: chunk,
+          headers: {
+            'Content-Type': file.type || 'application/octet-stream'
+          }
+        });
+
+        const etag = uploadResponse.headers.get('ETag');
+        uploadedParts.push({
+          PartNumber: i + 1,
+          ETag: etag
+        });
+
+        // Atualizar progresso
+        setUploadProgress(Math.round(((i + 1) / chunks) * 100));
       }
 
-      setMediaFile(data.media_file);
-      setShowUploader(false);
+      // 3. Completar upload multipart
+      const completeResponse = await fetch(`${API_BASE}/api/color-studio/upload/raw/complete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          key,
+          upload_id,
+          parts: uploadedParts
+        })
+      });
+
+      if (!completeResponse.ok) throw new Error('Falha ao completar upload');
+
+      const { r2_url } = await completeResponse.json();
+
+      setUploadStatus('converting');
+
+      // 4. Iniciar conversão para H.265
+      const convertResponse = await fetch(`${API_BASE}/api/color-studio/convert/raw`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          r2_key: key,
+          filename: file.name
+        })
+      });
+
+      if (!convertResponse.ok) throw new Error('Falha ao iniciar conversão');
+
+      const { job_id, video_id } = await convertResponse.json();
+      setVideoId(video_id);
+
+      // 5. Monitorar status da conversão
+      monitorConversion(job_id);
+
     } catch (err) {
-      console.error('Erro ao carregar media file:', err);
+      console.error('Erro no upload:', err);
       setError(err.message);
-    } finally {
-      setLoading(false);
+      setUploadStatus('error');
     }
   };
 
-  const handleUploadComplete = (uploadedFile) => {
-    console.log('Upload completo:', uploadedFile);
-    setMediaFile(uploadedFile);
-    setShowUploader(false);
-    // Atualizar URL
-    navigate(`/color-studio/${uploadedFile.id}`);
+  const monitorConversion = async (jobId) => {
+    const checkStatus = async () => {
+      try {
+        const response = await fetch(`${API_BASE}/api/color-studio/convert/status/${jobId}`);
+        const status = await response.json();
+
+        setConversionStatus(status);
+
+        if (status.status === 'completed') {
+          setUploadStatus('completed');
+          setShowTimeline(true);
+        } else if (status.status === 'failed') {
+          setUploadStatus('error');
+          setError('Conversão falhou');
+        } else {
+          setTimeout(checkStatus, 3000);
+        }
+      } catch (err) {
+        console.error('Erro ao verificar status:', err);
+      }
+    };
+
+    checkStatus();
   };
 
-  const handleNewUpload = () => {
-    setMediaFile(null);
-    setShowUploader(true);
-    navigate('/color-studio');
+  const resetUpload = () => {
+    setFile(null);
+    setFileInfo(null);
+    setUploadProgress(0);
+    setUploadStatus('idle');
+    setVideoId(null);
+    setConversionStatus(null);
+    setError(null);
+    setShowTimeline(false);
   };
-
-  const downloadRawFile = () => {
-    if (mediaFile?.raw?.url) {
-      window.open(mediaFile.raw.url, '_blank');
-    }
-  };
-
-  // Modo Upload
-  if (showUploader) {
-    return (
-      <div style={{ minHeight: '100vh', background: '#f5f5f5' }}>
-        <div style={{ padding: '40px', maxWidth: '1200px', margin: '0 auto' }}>
-          <div style={{ marginBottom: '40px' }}>
-            <h1 style={{ fontSize: '32px', fontWeight: 'bold', marginBottom: '10px' }}>
-              🎬 Color Studio
-            </h1>
-            <p style={{ color: '#666' }}>
-              Faça upload de arquivos RAW (.braw, .r3d, etc) ou vídeos (.mp4, .mov) para começar
-            </p>
-          </div>
-
-          <RawUploader 
-            projectId={1} 
-            onUploadComplete={handleUploadComplete}
-          />
-        </div>
-      </div>
-    );
-  }
-
-  // Loading
-  if (loading) {
-    return (
-      <div style={{ 
-        minHeight: '100vh', 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'center',
-        background: '#1a1a1a',
-        color: 'white'
-      }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ 
-            width: '50px', 
-            height: '50px', 
-            border: '4px solid #333',
-            borderTop: '4px solid #0070f3',
-            borderRadius: '50%',
-            animation: 'spin 1s linear infinite',
-            margin: '0 auto 20px'
-          }} />
-          <p>Carregando...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Error
-  if (error) {
-    return (
-      <div style={{ 
-        minHeight: '100vh', 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'center',
-        background: '#1a1a1a',
-        color: 'white'
-      }}>
-        <div style={{ textAlign: 'center', maxWidth: '500px', padding: '40px' }}>
-          <p style={{ fontSize: '48px', marginBottom: '20px' }}>❌</p>
-          <p style={{ fontSize: '18px', marginBottom: '20px' }}>Erro: {error}</p>
-          <button 
-            onClick={handleNewUpload}
-            style={{
-              padding: '12px 24px',
-              background: '#0070f3',
-              color: 'white',
-              border: 'none',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              fontWeight: '600'
-            }}
-          >
-            Voltar ao Upload
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // Modo Player
-  if (!mediaFile) {
-    return (
-      <div style={{ 
-        minHeight: '100vh', 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'center',
-        background: '#1a1a1a',
-        color: 'white'
-      }}>
-        <div style={{ textAlign: 'center' }}>
-          <p style={{ fontSize: '18px', marginBottom: '20px' }}>Arquivo não encontrado</p>
-          <button 
-            onClick={handleNewUpload}
-            style={{
-              padding: '12px 24px',
-              background: '#0070f3',
-              color: 'white',
-              border: 'none',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              fontWeight: '600'
-            }}
-          >
-            Fazer Upload
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   return (
-    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: '#1a1a1a' }}>
-      {/* Header */}
-      <div style={{
-        padding: '20px 40px',
-        background: '#2a2a2a',
-        borderBottom: '1px solid #3a3a3a',
-        color: 'white',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center'
-      }}>
-        <div>
-          <h1 style={{ fontSize: '20px', fontWeight: '600', marginBottom: '5px' }}>
-            {mediaFile.original_filename}
+    <div className="min-h-screen bg-black text-white">
+      <div className="container mx-auto px-4 py-8">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-5xl font-bold mb-3">
+            <span className="bg-gradient-to-r from-blue-400 via-purple-400 to-blue-500 bg-clip-text text-transparent">
+              Color Studio Pro
+            </span>
           </h1>
-          <p style={{ fontSize: '14px', color: '#999' }}>
-            {mediaFile.metadata.width}x{mediaFile.metadata.height} @ {mediaFile.metadata.fps}fps • 
-            {mediaFile.metadata.codec} → H.265 • 
-            {mediaFile.metadata.color_space} • 
-            {mediaFile.metadata.bit_depth} bits
+          <p className="text-gray-400 text-sm mb-4">
+            Sistema profissional de color grading com detecção automática de formatos
           </p>
+          <div className="flex justify-center gap-3">
+            <span className="px-3 py-1 bg-gray-900 rounded-md text-xs border border-gray-800">
+              SDR Display
+            </span>
+            <span className="px-3 py-1 bg-yellow-900/20 rounded-md text-xs border border-yellow-700/30 text-yellow-500">
+              Dolby Vision Certified
+            </span>
+          </div>
         </div>
-        
-        <button 
-          onClick={handleNewUpload}
-          style={{
-            padding: '8px 16px',
-            background: '#333',
-            color: 'white',
-            border: '1px solid #555',
-            borderRadius: '6px',
-            cursor: 'pointer',
-            fontSize: '14px',
-            fontWeight: '600'
-          }}
-        >
-          📤 Novo Upload
-        </button>
-      </div>
 
-      {/* Video Player */}
-      <div style={{ 
-        flex: 1, 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'center', 
-        background: '#000',
-        position: 'relative'
-      }}>
-        {mediaFile.proxy.stream_url ? (
-          <video
-            controls
-            autoPlay
-            style={{ 
-              maxWidth: '100%', 
-              maxHeight: '100%',
-              width: 'auto',
-              height: 'auto'
-            }}
-            src={mediaFile.proxy.stream_url}
-          >
-            Seu navegador não suporta vídeo HTML5.
-          </video>
-        ) : (
-          <div style={{ textAlign: 'center', color: '#999' }}>
-            <p style={{ fontSize: '48px', marginBottom: '20px' }}>🎬</p>
-            <p>Proxy não disponível</p>
-            {mediaFile.conversion.status === 'processing' && (
-              <p style={{ marginTop: '10px', color: '#0070f3' }}>
-                Processando... {mediaFile.conversion.progress}%
-              </p>
-            )}
+        {/* Main Upload Area */}
+        <div className="max-w-5xl mx-auto">
+          {!showTimeline ? (
+            <div className="bg-gray-900/30 backdrop-blur rounded-lg border border-gray-800 p-6">
+              
+              {uploadStatus === 'idle' && (
+                <div className="text-center py-12">
+                  <div className="mb-6">
+                    <svg className="w-20 h-20 mx-auto text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                    </svg>
+                    <h2 className="text-2xl font-semibold mb-2">Preview do Vídeo</h2>
+                    <p className="text-gray-500 text-sm mb-6">
+                      Faça upload de um arquivo para começar
+                    </p>
+                    <p className="text-xs text-gray-600 mb-8">
+                      Suporta: MP4, MOV, BRAW, R3D, ARI, MXF, DPX, EXR
+                    </p>
+                  </div>
+
+                  <label className="cursor-pointer">
+                    <input
+                      type="file"
+                      onChange={handleFileSelect}
+                      accept="video/*,.braw,.r3d,.ari,.mxf,.dpx,.exr"
+                      className="hidden"
+                    />
+                    <div className="px-6 py-3 bg-blue-600 rounded-lg font-medium text-sm hover:bg-blue-700 transition-all inline-block">
+                      Selecionar Arquivo
+                    </div>
+                  </label>
+                </div>
+              )}
+
+              {(uploadStatus === 'analyzing' || uploadStatus === 'ready') && fileInfo && (
+                <div>
+                  <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                    <span className="w-8 h-8 bg-gray-800 rounded flex items-center justify-center text-sm">
+                      📄
+                    </span>
+                    Informações do Arquivo
+                  </h3>
+
+                  <div className="bg-black/40 rounded-lg p-5 mb-5 border border-gray-800">
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <p className="text-gray-500 text-xs mb-1">Nome</p>
+                        <p className="font-medium truncate">{fileInfo.name}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-500 text-xs mb-1">Tamanho</p>
+                        <p className="font-medium">{formatFileSize(fileInfo.size)}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-500 text-xs mb-1">Formato</p>
+                        <p className="font-medium uppercase">{fileInfo.extension}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-500 text-xs mb-1">Tipo</p>
+                        <p className="font-medium">
+                          {fileInfo.isRaw ? (
+                            <span className="text-yellow-500">RAW Format</span>
+                          ) : (
+                            <span className="text-green-500">Standard Video</span>
+                          )}
+                        </p>
+                      </div>
+                      {fileInfo.duration && (
+                        <>
+                          <div>
+                            <p className="text-gray-500 text-xs mb-1">Duração</p>
+                            <p className="font-medium">{formatDuration(fileInfo.duration)}</p>
+                          </div>
+                          <div>
+                            <p className="text-gray-500 text-xs mb-1">Resolução</p>
+                            <p className="font-medium">{fileInfo.width} × {fileInfo.height}</p>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3">
+                    <button
+                      onClick={startUpload}
+                      disabled={uploadStatus === 'analyzing'}
+                      className="flex-1 px-5 py-3 bg-blue-600 rounded-lg font-medium text-sm hover:bg-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {uploadStatus === 'analyzing' ? 'Analisando...' : 'Iniciar Upload'}
+                    </button>
+                    <button
+                      onClick={resetUpload}
+                      className="px-5 py-3 bg-gray-800 rounded-lg font-medium text-sm hover:bg-gray-700 transition-all"
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {uploadStatus === 'uploading' && (
+                <div className="py-8">
+                  <h3 className="text-xl font-semibold mb-6 text-center">Enviando Arquivo...</h3>
+                  <div className="mb-4">
+                    <div className="flex justify-between mb-2 text-sm">
+                      <span className="text-gray-400">Progresso</span>
+                      <span className="font-semibold text-blue-400">{uploadProgress}%</span>
+                    </div>
+                    <div className="w-full bg-gray-800 rounded-full h-2 overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-blue-500 to-blue-600 transition-all duration-300"
+                        style={{ width: `${uploadProgress}%` }}
+                      />
+                    </div>
+                  </div>
+                  <p className="text-gray-500 text-center text-sm mt-4">
+                    Processando arquivo...
+                  </p>
+                </div>
+              )}
+
+              {uploadStatus === 'converting' && (
+                <div className="text-center py-8">
+                  <div className="w-16 h-16 mx-auto mb-4 relative">
+                    <div className="absolute inset-0 border-4 border-blue-500/20 rounded-full" />
+                    <div className="absolute inset-0 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                  </div>
+                  <h3 className="text-xl font-semibold mb-2">Convertendo para H.265...</h3>
+                  <p className="text-gray-500 text-sm mb-4">
+                    Seu arquivo RAW está sendo processado
+                  </p>
+                  {conversionStatus && (
+                    <div className="bg-black/40 rounded-lg p-3 border border-gray-800 inline-block">
+                      <p className="text-xs text-gray-400">Status: {conversionStatus.status}</p>
+                      {conversionStatus.progress && (
+                        <p className="text-xs text-blue-400 mt-1">
+                          Progresso: {conversionStatus.progress}%
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {uploadStatus === 'error' && error && (
+                <div className="text-center py-8">
+                  <div className="w-16 h-16 mx-auto mb-4 bg-red-900/20 rounded-full flex items-center justify-center border border-red-800">
+                    <span className="text-3xl">⚠️</span>
+                  </div>
+                  <h3 className="text-xl font-semibold mb-2 text-red-400">Erro no Upload</h3>
+                  <p className="text-gray-400 text-sm mb-6">{error}</p>
+                  <button
+                    onClick={resetUpload}
+                    className="px-6 py-3 bg-gray-800 rounded-lg font-medium text-sm hover:bg-gray-700 transition-all"
+                  >
+                    Tentar Novamente
+                  </button>
+                </div>
+              )}
+
+            </div>
+          ) : (
+            <TimelineView videoId={videoId} onBack={resetUpload} />
+          )}
+        </div>
+
+        {/* Features */}
+        {!showTimeline && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-8 max-w-5xl mx-auto">
+            <div className="bg-gray-900/20 backdrop-blur rounded-lg p-4 border border-gray-800">
+              <div className="text-2xl mb-2">🎬</div>
+              <h4 className="font-semibold text-sm mb-1">RAW Support</h4>
+              <p className="text-xs text-gray-500">BRAW, R3D, ARRI, MXF e mais</p>
+            </div>
+            <div className="bg-gray-900/20 backdrop-blur rounded-lg p-4 border border-gray-800">
+              <div className="text-2xl mb-2">⚡</div>
+              <h4 className="font-semibold text-sm mb-1">Conversão Rápida</h4>
+              <p className="text-xs text-gray-500">Otimizado para H.265/HEVC</p>
+            </div>
+            <div className="bg-gray-900/20 backdrop-blur rounded-lg p-4 border border-gray-800">
+              <div className="text-2xl mb-2">☁️</div>
+              <h4 className="font-semibold text-sm mb-1">Cloud Streaming</h4>
+              <p className="text-xs text-gray-500">Cloudflare Stream integrado</p>
+            </div>
           </div>
         )}
+
+        {/* Footer */}
+        <footer className="text-center text-gray-600 text-xs mt-12">
+          <p>&copy; 2023 Color Studio Pro. Todos os direitos reservados.</p>
+        </footer>
       </div>
+    </div>
+  );
+}
 
-      {/* Info Panel */}
-      <div style={{
-        padding: '20px 40px',
-        background: '#2a2a2a',
-        borderTop: '1px solid #3a3a3a',
-        color: 'white'
-      }}>
-        <div style={{ 
-          display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-          gap: '20px',
-          marginBottom: '20px'
-        }}>
-          <div>
-            <p style={{ fontSize: '12px', color: '#999', marginBottom: '5px' }}>DURAÇÃO</p>
-            <p style={{ fontSize: '16px', fontWeight: '600' }}>
-              {Math.round(mediaFile.metadata.duration)}s
-            </p>
-          </div>
-          
-          <div>
-            <p style={{ fontSize: '12px', color: '#999', marginBottom: '5px' }}>RESOLUÇÃO</p>
-            <p style={{ fontSize: '16px', fontWeight: '600' }}>
-              {mediaFile.metadata.width}x{mediaFile.metadata.height}
-            </p>
-          </div>
-          
-          <div>
-            <p style={{ fontSize: '12px', color: '#999', marginBottom: '5px' }}>FRAME RATE</p>
-            <p style={{ fontSize: '16px', fontWeight: '600' }}>
-              {mediaFile.metadata.fps} fps
-            </p>
-          </div>
-          
-          <div>
-            <p style={{ fontSize: '12px', color: '#999', marginBottom: '5px' }}>CODEC</p>
-            <p style={{ fontSize: '16px', fontWeight: '600' }}>
-              {mediaFile.metadata.codec} → H.265
-            </p>
-          </div>
-          
-          <div>
-            <p style={{ fontSize: '12px', color: '#999', marginBottom: '5px' }}>COLOR SPACE</p>
-            <p style={{ fontSize: '16px', fontWeight: '600' }}>
-              {mediaFile.metadata.color_space}
-            </p>
-          </div>
-          
-          <div>
-            <p style={{ fontSize: '12px', color: '#999', marginBottom: '5px' }}>BIT DEPTH</p>
-            <p style={{ fontSize: '16px', fontWeight: '600' }}>
-              {mediaFile.metadata.bit_depth} bits
-            </p>
-          </div>
-        </div>
-
-        {/* Controls */}
-        <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', flexWrap: 'wrap' }}>
-          <button style={{
-            padding: '12px 24px',
-            background: '#0070f3',
-            color: 'white',
-            border: 'none',
-            borderRadius: '6px',
-            cursor: 'pointer',
-            fontWeight: '600',
-            fontSize: '14px'
-          }}>
-            🎨 Aplicar LUT
-          </button>
-          
-          <button style={{
-            padding: '12px 24px',
-            background: '#333',
-            color: 'white',
-            border: '1px solid #555',
-            borderRadius: '6px',
-            cursor: 'pointer',
-            fontWeight: '600',
-            fontSize: '14px'
-          }}>
-            ⚙️ Ajustes de Cor
-          </button>
-          
-          <button style={{
-            padding: '12px 24px',
-            background: '#333',
-            color: 'white',
-            border: '1px solid #555',
-            borderRadius: '6px',
-            cursor: 'pointer',
-            fontWeight: '600',
-            fontSize: '14px'
-          }}>
-            🎵 Audio
-          </button>
-          
-          <button 
-            onClick={downloadRawFile}
-            style={{
-              padding: '12px 24px',
-              background: '#333',
-              color: 'white',
-              border: '1px solid #555',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              fontWeight: '600',
-              fontSize: '14px'
-            }}
-          >
-            💾 Baixar RAW Original
-          </button>
-          
-          <button style={{
-            padding: '12px 24px',
-            background: '#28a745',
-            color: 'white',
-            border: 'none',
-            borderRadius: '6px',
-            cursor: 'pointer',
-            fontWeight: '600',
-            fontSize: '14px'
-          }}>
-            ✅ Aprovar
-          </button>
-        </div>
-      </div>
-
-      <style>{`
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-      `}</style>
+// Componente TimelineView (placeholder por enquanto)
+const TimelineView = ({ videoId, onBack }) => {
+  return (
+    <div className="bg-gray-900/30 backdrop-blur rounded-lg border border-gray-800 p-6 text-center">
+      <h2 className="text-2xl font-semibold mb-4">Timeline View para {videoId}</h2>
+      <p className="text-gray-400 mb-6">Aqui você poderá editar e visualizar seu vídeo.</p>
+      <button
+        onClick={onBack}
+        className="px-6 py-3 bg-blue-600 rounded-lg font-medium text-sm hover:bg-blue-700 transition-all"
+      >
+        Voltar
+      </button>
     </div>
   );
 };
-
-export default ColorStudio;
-
