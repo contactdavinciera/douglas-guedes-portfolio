@@ -4,6 +4,7 @@ import { Button } from '../components/ui/button';
 import ProcessingControls from '../components/ProcessingControls';
 import LUTLibrary from '../components/LUTLibrary';
 import InteractiveTimeline from '../components/InteractiveTimeline';
+import ClipOptionsPanel from '../components/ClipOptionsPanel';
 import StreamUploader from '../components/StreamUploader';
 import colorStudioApi from '../services/colorStudioApi';
 
@@ -20,6 +21,8 @@ const ColorStudio = () => {
   const [videoAspectRatio, setVideoAspectRatio] = useState('16:9');
   const [uploadProgress, setUploadProgress] = useState(0);
   const [processingSettings, setProcessingSettings] = useState({});
+  const [selectedClip, setSelectedClip] = useState(null);
+  const [showClipOptions, setShowClipOptions] = useState(false);
 
   const containerRef = useRef(null);
 
@@ -118,6 +121,34 @@ const ColorStudio = () => {
 
 
 
+  // Manipular seleção de clip
+  const handleClipSelect = (clip) => {
+    console.log('ColorStudio: Clip selecionado:', clip);
+    setSelectedClip(clip);
+    setShowClipOptions(true);
+  };
+
+  // Manipular atualização de clip
+  const handleClipUpdate = (updatedClip) => {
+    console.log('ColorStudio: Clip atualizado:', updatedClip);
+    if (streamVideo && streamVideo.clips) {
+      const updatedClips = streamVideo.clips.map(clip => 
+        clip.id === updatedClip.id ? updatedClip : clip
+      );
+      setStreamVideo({
+        ...streamVideo,
+        clips: updatedClips
+      });
+    }
+    setSelectedClip(updatedClip);
+  };
+
+  // Fechar painel de opções do clip
+  const handleCloseClipOptions = () => {
+    setShowClipOptions(false);
+    setSelectedClip(null);
+  };
+
   const applyLUT = (lut) => {
     console.log('ColorStudio: Aplicando LUT:', lut.name);
     setSelectedLUT(lut);
@@ -125,13 +156,6 @@ const ColorStudio = () => {
     
     // Em uma implementação real, isso enviaria uma requisição para aplicar o LUT
     // ao vídeo no Cloudflare Stream ou processaria localmente
-    if (player) {
-      // Aplicar efeitos visuais temporários para demonstração
-      const iframe = document.querySelector('#stream-player iframe');
-      if (iframe) {
-        iframe.style.filter = `hue-rotate(${Math.random() * 30 - 15}deg) saturate(${0.8 + Math.random() * 0.4}) contrast(${0.9 + Math.random() * 0.2})`;
-      }
-    }
   };
 
 
@@ -227,8 +251,8 @@ const ColorStudio = () => {
                 <div className="relative w-full h-full">
                   <InteractiveTimeline
                     clips={streamVideo.clips || []}
-                    onClipSelect={(clip) => console.log("Clip selecionado:", clip)}
-                    selectedClipId={null} // Adicionar lógica para gerenciar o clip selecionado
+                    onClipSelect={handleClipSelect}
+                    selectedClipId={selectedClip?.id || null}
                     audioUrl={null} // Adicionar lógica para áudio se necessário
                     onAudioChange={(url) => console.log("Áudio alterado para:", url)}
                   />
@@ -336,6 +360,25 @@ const ColorStudio = () => {
             isVisible={showLibrary}
             onClose={() => setShowLibrary(false)}
           />
+
+          {/* Clip Options Panel */}
+          {showClipOptions && (
+            <div className="w-full max-w-4xl">
+              <ClipOptionsPanel
+                clip={selectedClip}
+                onUpdate={handleClipUpdate}
+                onClose={handleCloseClipOptions}
+                availableLuts={[
+                  { id: 'cinematic', name: 'Cinematic Look' },
+                  { id: 'vintage', name: 'Vintage Film' },
+                  { id: 'modern', name: 'Modern Clean' },
+                  { id: 'warm', name: 'Warm Tones' },
+                  { id: 'cool', name: 'Cool Tones' }
+                ]}
+                projectType={isHDRCapable ? 'HDR' : 'SDR'}
+              />
+            </div>
+          )}
 
           {/* Selected LUT Info */}
           {selectedLUT && (
