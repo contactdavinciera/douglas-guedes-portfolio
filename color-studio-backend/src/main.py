@@ -20,18 +20,18 @@ from src.routes.colorist_routes import colorist_bp
 from flask_cors import CORS
 
 app = Flask(__name__, static_folder=os.path.join(os.path.dirname(__file__), 'static'))
-CORS(app, resources={
-    r"/api/*": {
-        "origins": [
-            "https://douglas-guedes-portfolio.pages.dev",
-            "http://localhost:5173",
-            "http://localhost:3000"
-        ],
-        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-        "allow_headers": ["Content-Type", "Authorization", "Upload-Offset", "Upload-Length"]
-    }
-})
+
+# CORS Configuration - ATUALIZADO
+CORS(app, 
+     resources={r"/api/*": {"origins": "*"}},
+     allow_headers=["Content-Type", "Authorization", "Upload-Offset", "Upload-Length", "Tus-Resumable"],
+     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"],
+     expose_headers=["Upload-Offset", "Upload-Length", "Tus-Resumable", "Location"],
+     supports_credentials=True
+)
+
 app.config['SECRET_KEY'] = 'asdf#FGSgvasgf$5$WGT'
+app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024 * 1024  # 5GB max upload
 
 # Registrar blueprints
 app.register_blueprint(user_bp, url_prefix='/api')
@@ -46,6 +46,10 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db.init_app(app)
 with app.app_context():
     db.create_all()
+
+# Criar diretórios necessários
+os.makedirs(os.path.join(os.path.dirname(__file__), 'uploads'), exist_ok=True)
+os.makedirs(os.path.join(os.path.dirname(__file__), 'database'), exist_ok=True)
 
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
