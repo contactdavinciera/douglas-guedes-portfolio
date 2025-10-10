@@ -46,19 +46,9 @@ def create_app():
     db.init_app(app)
 
     # --- Configuração do CORS ---
-    CORS(app, resources={r"/api/*": {"origins": "https://douglas-guedes-portfolio.pages.dev"}})
+    CORS(app, resources={r"/api/*": {"origins": "https://douglas-guedes-portfolio.pages.dev", "supports_credentials": True}})
 
-    # --- Tratamento de requisições OPTIONS (Preflight) ---
-    @app.before_request
-    def handle_options_requests():
-        if request.method == 'OPTIONS':
-            response = app.make_response('')
-            response.headers.add("Access-Control-Allow-Origin", "https://douglas-guedes-portfolio.pages.dev")
-            response.headers.add("Access-Control-Allow-Headers", "Content-Type, Authorization, Upload-Offset, Upload-Length, Tus-Resumable")
-            response.headers.add("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH, HEAD")
-            response.headers.add("Access-Control-Expose-Headers", "Upload-Offset, Upload-Length, Tus-Resumable, Location")
-            response.headers.add("Access-Control-Allow-Credentials", "true")
-            return response
+
 
     # --- Registro dos Blueprints ---
     app.register_blueprint(user_bp, url_prefix='/api')
