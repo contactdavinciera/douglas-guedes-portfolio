@@ -238,95 +238,53 @@ const StreamUploader = ({
         </div>
       )}
 
-      {/* {uploadState === 'success' && videoIdForPreview && (
-        <div className="mt-8">
-          {/* Cinema Theater Container */}
-          <div className="relative bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900 rounded-2xl p-8 shadow-2xl">
-            {/* Theater Header */}
-            <div className="text-center mb-6">
-              <h3 className="text-2xl font-bold text-white mb-2">🎬 Sala de Projeção</h3>
-              <p className="text-gray-300 text-sm">Seu vídeo está pronto para ser assistido</p>
-            </div>
-
-            {/* Cinema Screen */}
-            <div className="relative bg-black rounded-lg p-4 shadow-inner">
-              {/* Screen Frame */}
-              <div className="relative bg-gray-900 rounded-lg overflow-hidden shadow-2xl border-4 border-gray-700">
-                {/* Video Player */}
-                <iframe
-                  src={`https://customer-5dr3ublgoe3wg2wj.cloudflarestream.com/${videoIdForPreview}/iframe`}
-                  style={{ border: 'none' }}
-                  className="w-full aspect-video"
-                  allow="accelerometer; gyroscope; autoplay; encrypted-in-picture;"
-                  allowFullScreen={true}
-                ></iframe>
-              </div>
-              
-              {/* Screen Glow Effect */}
-              <div className="absolute inset-0 bg-blue-500/10 rounded-lg pointer-events-none"></div>
-            </div>
-
-            {/* Cinema Seats */}
-            <div className="mt-6 flex justify-center space-x-2">
-              {[...Array(8)].map((_, i) => (
-                <div key={i} className="flex flex-col items-center">
-                  {/* Seat */}
-                  <div className="w-6 h-6 bg-red-600 rounded-t-lg border-2 border-red-700 shadow-lg transform hover:scale-110 transition-transform duration-200"></div>
-                  {/* Seat Base */}
-                  <div className="w-8 h-2 bg-red-700 rounded-b-sm"></div>
-                </div>
-              ))}
-            </div>
-
-            {/* Theater Floor Pattern */}
-            <div className="mt-4 h-2 bg-gradient-to-r from-transparent via-red-900/30 to-transparent rounded-full"></div>
-            
-            {/* Ambient Lighting */}
-            <div className="absolute top-0 left-0 w-full h-full bg-gradient-radial from-transparent via-transparent to-black/20 rounded-2xl pointer-events-none"></div>
-
-            {/* Uploaded File Info and Reset Button */}
-            <div className="bg-gray-800/50 rounded-xl p-4 mt-6 border border-gray-700">
-              <div className="flex items-center space-x-3 mb-4">
-                <CheckCircle className="text-green-400" size={24} />
-                <div>
-                  <h3 className="font-semibold text-green-400">Upload Concluído!</h3>
-                  <p className="text-sm text-gray-400">
-                    {uploadedFile?.name} foi enviado com sucesso
-                  </p>
-                </div>
-              </div>
-
-              {videoMetadata && (
-                <div className="bg-gray-700/50 rounded-lg p-3 mb-4">
-                  <h4 className="font-medium mb-2 text-gray-300">Informações do Arquivo</h4>
-                  <div className="grid grid-cols-2 gap-3 text-sm">
-                    <div>
-                      <span className="text-gray-400">Formato:</span>
-                      <span className="ml-2 text-blue-400">{videoMetadata.format}</span>
-                    </div>
-                    <div>
-                      <span className="text-gray-400">Color Space:</span>
-                      <span className="ml-2 text-purple-400">{videoMetadata.colorSpace}</span>
-                    </div>
-                    <div>
-                      <span className="text-gray-400">Tamanho:</span>
-                      <span className="ml-2">{formatFileSize(videoMetadata.size)}</span>
-                    </div>
-                    <div>
-                      <span className="text-gray-400">Tipo:</span>
-                      <span className="ml-2">{videoMetadata.isRaw ? 'RAW' : 'Processado'}</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <Button onClick={resetUpload} variant="outline" className="w-full">
-                Enviar Outro Arquivo
-              </Button>
+      {uploadState === 'success' && videoIdForPreview && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-center p-8 bg-green-50 dark:bg-green-900/20 rounded-lg border-2 border-green-500">
+            <CheckCircle className="w-12 h-12 text-green-500 mr-4" />
+            <div>
+              <h3 className="text-lg font-semibold text-green-700 dark:text-green-400">
+                Upload Concluído!
+              </h3>
+              <p className="text-sm text-green-600 dark:text-green-500">
+                {uploadedFile?.name} foi enviado com sucesso
+              </p>
             </div>
           </div>
+
+          {videoMetadata && (
+            <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg space-y-2">
+              <h4 className="font-semibold text-sm text-gray-700 dark:text-gray-300">
+                Informações do Arquivo
+              </h4>
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div>
+                  <span className="text-gray-500">Formato:</span>
+                  <span className="ml-2 font-medium">{videoMetadata.format}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500">Color Space:</span>
+                  <span className="ml-2 font-medium">{videoMetadata.colorSpace}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500">Tamanho:</span>
+                  <span className="ml-2 font-medium">{formatFileSize(videoMetadata.size)}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500">Tipo:</span>
+                  <span className="ml-2 font-medium">
+                    {videoMetadata.isRaw ? 'RAW' : 'Processado'}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <Button onClick={resetUpload} className="w-full">
+            Enviar Outro Arquivo
+          </Button>
         </div>
-        )}
+      )}
 
 
       {uploadState === 'error' && (
