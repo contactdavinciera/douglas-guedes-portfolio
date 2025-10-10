@@ -3,14 +3,14 @@ import { Upload, Play, Download, Settings, Monitor, Palette, Zap, Award, AlertCi
 import { Button } from '../components/ui/button';
 import ProcessingControls from '../components/ProcessingControls';
 import LUTLibrary from '../components/LUTLibrary';
-import CloudflareStreamPlayer from '../components/CloudflareStreamPlayer';
+import InteractiveTimeline from '../components/InteractiveTimeline';
 import StreamUploader from '../components/StreamUploader';
 import colorStudioApi from '../services/colorStudioApi';
 
 const ColorStudio = () => {
   const [isFullscreen, setIsFullscreen] = useState(false);
   console.log('ColorStudio: Componente carregado');
-  const [streamVideo, setStreamVideo] = useState(null); // { videoId, customerCode, metadata }
+  const [streamVideo, setStreamVideo] = useState(null); // { videoId, customerCode, metadata, clips: [] }
   const [selectedLUT, setSelectedLUT] = useState(null);
   const [isHDRCapable, setIsHDRCapable] = useState(false);
   const [previewMode, setPreviewMode] = useState('auto'); // 'auto', 'advanced'
@@ -20,7 +20,7 @@ const ColorStudio = () => {
   const [videoAspectRatio, setVideoAspectRatio] = useState('16:9');
   const [uploadProgress, setUploadProgress] = useState(0);
   const [processingSettings, setProcessingSettings] = useState({});
-  const [player, setPlayer] = useState(null);
+
   const containerRef = useRef(null);
 
   // Detectar capacidade HDR do dispositivo
@@ -41,7 +41,21 @@ const ColorStudio = () => {
   // Manipular upload completo para Cloudflare Stream
   const handleUploadComplete = (result) => {
     console.log('ColorStudio: handleUploadComplete acionado com resultado:', result);
-    setStreamVideo(result);
+    setStreamVideo({
+      ...result,
+      clips: [{ 
+        id: result.videoId, 
+        name: "Clip Principal", 
+        url: `https://customer-code.cloudflarestream.com/${result.videoId}/manifest/video.m3u8`, // URL do Cloudflare Stream
+        raw_url: `https://customer-code.cloudflarestream.com/${result.videoId}/manifest/video.m3u8`, // Exemplo, ajustar conforme a necessidade
+        client_lut_url: `https://customer-code.cloudflarestream.com/${result.videoId}/manifest/video.m3u8`, // Exemplo, ajustar conforme a necessidade
+        graded_url: `https://customer-code.cloudflarestream.com/${result.videoId}/manifest/video.m3u8`, // Exemplo, ajustar conforme a necessidade
+        duration: result.metadata.duration,
+        resolution: `${result.metadata.width}x${result.metadata.height}`,
+        codec: result.metadata.format,
+        fps: 24 // Assumindo 24 FPS, ajustar se metadata tiver
+      }]
+    });
     
     // Detectar aspect ratio baseado nos metadados
     if (result.metadata) {
@@ -102,23 +116,7 @@ const ColorStudio = () => {
     return Math.round(basePrice * formatMultiplier * resMultiplier * durationMultiplier);
   };
 
-  // Manipular quando o player estiver pronto
-  const handlePlayerReady = (streamPlayer) => {
-    console.log('ColorStudio: Player do Stream pronto.');
-    setPlayer(streamPlayer);
-  };
 
-  // Manipular fim do vídeo
-  const handleVideoEnd = () => {
-    console.log('ColorStudio: Vídeo terminou.');
-    // Lógica para quando o vídeo terminar
-  };
-
-  // Manipular atualização de tempo
-  const handleTimeUpdate = (currentTime, duration) => {
-    // console.log('ColorStudio: Tempo do vídeo atualizado:', currentTime);
-    // Lógica para atualização de tempo se necessário
-  };
 
   const applyLUT = (lut) => {
     console.log('ColorStudio: Aplicando LUT:', lut.name);
@@ -227,16 +225,12 @@ const ColorStudio = () => {
             <div className={getVideoPlayerStyle()}>
               {streamVideo ? (
                 <div className="relative w-full h-full">
-                  <CloudflareStreamPlayer
-                    videoId={streamVideo.videoId}
-                    customerCode={streamVideo.customerCode}
-                    aspectRatio={videoAspectRatio}
-                    onPlayerReady={handlePlayerReady}
-                    onVideoEnd={handleVideoEnd}
-                    onTimeUpdate={handleTimeUpdate}
-                    primaryColor="#3b82f6"
-                    letterboxColor="transparent"
-                    className="w-full h-full"
+                  <InteractiveTimeline
+                    clips={streamVideo.clips || []}
+                    onClipSelect={(clip) => console.log("Clip selecionado:", clip)}
+                    selectedClipId={null} // Adicionar lógica para gerenciar o clip selecionado
+                    audioUrl={null} // Adicionar lógica para áudio se necessário
+                    onAudioChange={(url) => console.log("Áudio alterado para:", url)}
                   />
 
                   {/* LUT Preview Overlay */}

@@ -3,12 +3,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Slider } from '@/components/ui/slider';
-import { 
-  Play, 
-  Pause, 
-  SkipBack, 
-  SkipForward, 
-  Volume2, 
+import {
+  Play,
+  Pause,
+  SkipBack,
+  SkipForward,
+  Volume2,
   VolumeX,
   Maximize2,
   Settings
@@ -177,7 +177,7 @@ const InteractiveTimeline = ({
             ) : (
               <div className="flex items-center justify-center h-full text-white">
                 <p>Selecione um clip para visualizar</p>
-              }
+              </div>
             )}
 
             {/* View Mode Selector */}
