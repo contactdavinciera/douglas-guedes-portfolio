@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import { Routes, Route } from 'react-router-dom'
 import Header from './components/Header'
 import Footer from './components/Footer'
 import Home from './pages/Home'
@@ -16,7 +16,7 @@ console.log('App.jsx loaded - Version 2.2'); // Para verificar o deploy
 
 function App() {
   return (
-    <Router>
+
       <div className="min-h-screen bg-black text-white">
         <Header />
         <main>
@@ -33,7 +33,7 @@ function App() {
         </main>
         <Footer />
       </div>
-    </Router>
+
   )
 }
 
