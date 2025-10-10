@@ -503,3 +503,12 @@ def get_conversion_status(job_id):
         import traceback
         traceback.print_exc()
         return jsonify({"success": False, "error": str(e)}), 500
+
+
+@color_studio_bp.route("/health", methods=["GET"])
+def health_check():
+    """
+    Endpoint para verificar a saúde do serviço.
+    """
+    return jsonify({"status": "ok", "message": "Color Studio Backend is running!"}), 200
+
