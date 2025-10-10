@@ -15,7 +15,7 @@ from src.routes.user import user_bp
 from src.routes.color_studio import color_studio_bp
 from src.routes.upload_routes import upload_bp
 from src.routes.pricing_routes import pricing_bp
-from src.routes.colorist import colorist_bp
+from src.routes.colorist_routes import colorist_bp
 
 from flask_cors import CORS
 
