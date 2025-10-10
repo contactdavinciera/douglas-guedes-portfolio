@@ -1,7 +1,5 @@
 // API service for Color Studio Pro
-const API_BASE_URL = process.env.NODE_ENV === 'production' 
-  ? 'https://color-studio-backend.onrender.com/api/color-studio' 
-  : 'http://localhost:5001/api/color-studio';
+const API_BASE_URL = 'https://douglas-guedes-portfolio.onrender.com/api/color-studio';
 
 class ColorStudioAPI {
   async uploadFile(file, projectName, clientEmail) {
