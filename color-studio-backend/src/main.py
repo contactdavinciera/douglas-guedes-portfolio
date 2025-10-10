@@ -46,7 +46,20 @@ def create_app():
     db.init_app(app)
 
     # --- Configuração do CORS ---
-    CORS(app, resources={r"/api/*": {"origins": "https://douglas-guedes-portfolio.pages.dev", "supports_credentials": True}})
+    CORS(app, resources={
+    r"/*": {
+        "origins": [
+            "https://douglas-guedes-portfolio.pages.dev",
+            "https://douglas-guedes-portfolio.onrender.com",
+            "http://localhost:3000",
+            "http://localhost:5173"
+        ],
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"],
+        "allow_headers": ["Content-Type", "Authorization", "Upload-Offset", "Upload-Length", "Tus-Resumable"],
+        "expose_headers": ["Content-Length", "Content-Type", "Upload-Offset", "Upload-Length", "Tus-Resumable", "Location"],
+        "supports_credentials": True
+    }
+})
 
 
 
