@@ -1,6 +1,6 @@
 """
 Backend principal do Douglas Guedes Portfolio
-Versão corrigida com CORS funcionando para Color Studio
+Versão FINAL com CORS funcionando para todos os subdomínios do Pages
 """
 
 import os
@@ -49,22 +49,23 @@ def create_app():
     db.init_app(app)
 
     # ==========================================
-    # CONFIGURAÇÃO CORS - CRÍTICO!
+    # CONFIGURAÇÃO CORS - ACEITA TODOS SUBDOMÍNIOS
     # ==========================================
-    cors_origins = os.getenv("ALLOWED_ORIGINS", "https://douglas-guedes-portfolio.pages.dev").split(",")
-
-    # Adicionar wildcard para subdomínios do Pages e localhost
-    cors_origins.extend([
-        "https://*.douglas-guedes-portfolio.pages.dev",  # Preview URLs
+    
+    # Lista de origens permitidas (base)
+    base_origins = [
+        "https://douglas-guedes-portfolio.onrender.com",
+        "https://douglas-guedes-portfolio.pages.dev",
         "http://localhost:3000",
-        "http://localhost:5173"
-    ])
+        "http://localhost:5173",
+        "http://localhost:5174"
+    ]
 
-    # CORS global para todas as rotas /api/*
+    # CORS inicial
     CORS(app,
          resources={
              r"/api/*": {
-                 "origins": cors_origins,
+                 "origins": base_origins,
                  "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"],
                  "allow_headers": [
                      "Content-Type", 
@@ -89,21 +90,49 @@ def create_app():
          })
 
     # ==========================================
-    # MIDDLEWARE CORS ADICIONAL (FALLBACK)
+    # MIDDLEWARE CORS DINÂMICO (aceita subdomínios)
     # ==========================================
     @app.after_request
     def after_request(response):
-        """Adiciona headers CORS manualmente como fallback"""
+        """
+        Middleware CORS que aceita dinamicamente:
+        - Todos os subdomínios do Cloudflare Pages
+        - Origens base permitidas
+        """
         origin = request.headers.get('Origin')
         
-        # Permitir apenas origins conhecidas
-        if origin in cors_origins:
-            response.headers['Access-Control-Allow-Origin'] = origin
-            response.headers['Access-Control-Allow-Credentials'] = 'true'
-            response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS, PATCH, HEAD'
-            response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Upload-Offset, Upload-Length, Tus-Resumable, X-Requested-With'
-            response.headers['Access-Control-Expose-Headers'] = 'Content-Length, Content-Type, Upload-Offset, Upload-Length, Tus-Resumable, Location, ETag'
-            response.headers['Access-Control-Max-Age'] = '3600'
+        if origin:
+            # Verificar se é uma origem permitida
+            allowed = False
+            
+            # 1. Verificar origens base
+            if origin in base_origins:
+                allowed = True
+            
+            # 2. Verificar subdomínios do Pages (.pages.dev)
+            elif origin.endswith('.douglas-guedes-portfolio.pages.dev'):
+                allowed = True
+                
+            # 3. Verificar domínio principal do Pages
+            elif 'douglas-guedes-portfolio.pages.dev' in origin:
+                allowed = True
+            
+            # Se permitido, adicionar headers CORS
+            if allowed:
+                response.headers['Access-Control-Allow-Origin'] = origin
+                response.headers['Access-Control-Allow-Credentials'] = 'true'
+                response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS, PATCH, HEAD'
+                response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Upload-Offset, Upload-Length, Tus-Resumable, X-Requested-With'
+                response.headers['Access-Control-Expose-Headers'] = 'Content-Length, Content-Type, Upload-Offset, Upload-Length, Location, ETag'
+                response.headers['Access-Control-Max-Age'] = '3600'
+                
+                # Log apenas em desenvolvimento
+                if app.debug:
+                    app.logger.info(f"✅ CORS allowed for: {origin}")
+            else:
+                # Log de origem não permitida (apenas em dev)
+                if app.debug:
+                    app.logger.warning(f"⚠️ CORS blocked for: {origin}")
         
         return response
 
@@ -122,7 +151,7 @@ def create_app():
     from src.routes.upload_routes import upload_bp
     from src.routes.pricing_routes import pricing_bp
     from src.routes.colorist_routes import colorist_bp
-    from src.routes.conversion_routes import conversion_bp
+    from src.routes.conversion import conversion_bp
 
     # ==========================================
     # REGISTRAR BLUEPRINTS
@@ -171,7 +200,10 @@ def create_app():
     print("🚀 Backend initialized successfully")
     print(f"📁 Static folder: {static_folder}")
     print(f"💾 Database: {db_path}")
-    print(f"🌐 CORS enabled for: {', '.join(cors_origins)}")
+    print(f"🌐 CORS enabled for:")
+    for origin in base_origins:
+        print(f"   - {origin}")
+    print(f"   - *.douglas-guedes-portfolio.pages.dev (all subdomains)")
     print("=" * 60)
 
     return app
