@@ -51,13 +51,14 @@ def create_app():
     # ==========================================
     # CONFIGURAÇÃO CORS - CRÍTICO!
     # ==========================================
-    cors_origins = [
-        "https://douglas-guedes-portfolio.onrender.com",
-        "https://douglas-guedes-portfolio.pages.dev",
+    cors_origins = os.getenv("ALLOWED_ORIGINS", "https://douglas-guedes-portfolio.pages.dev").split(",")
+
+    # Adicionar wildcard para subdomínios do Pages e localhost
+    cors_origins.extend([
+        "https://*.douglas-guedes-portfolio.pages.dev",  # Preview URLs
         "http://localhost:3000",
-        "http://localhost:5173",
-        "http://localhost:5174"
-    ]
+        "http://localhost:5173"
+    ])
 
     # CORS global para todas as rotas /api/*
     CORS(app,
