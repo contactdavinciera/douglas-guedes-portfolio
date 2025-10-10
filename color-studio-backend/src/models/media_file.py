@@ -11,6 +11,10 @@ class MediaFile(db.Model):
     original_url = db.Column(db.String(500), nullable=True) # URL para download (presigned ou Cloudflare Stream)
     metadata = db.Column(db.JSON, nullable=True)  # Metadados do arquivo (resolução, codec, etc.)
     uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
+    proxy_file_key = db.Column(db.String(255), nullable=True)
+    proxy_stream_url = db.Column(db.String(500), nullable=True)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
     
     project = db.relationship("Project", backref=db.backref("media_files", lazy=True))
 
