@@ -9,6 +9,7 @@ import uuid
 import base64
 from datetime import datetime
 from flask import Blueprint, request, jsonify, current_app, make_response
+from flask_cors import cross_origin
 from werkzeug.utils import secure_filename
 import subprocess
 import requests
@@ -318,6 +319,7 @@ def get_video_status():
 # ==========================================
 
 @color_studio_bp.route("/upload/raw/init", methods=["POST", "OPTIONS"])
+@cross_origin(origins=["https://douglas-guedes-portfolio.onrender.com", "https://douglas-guedes-portfolio.pages.dev", "http://localhost:3000", "http://localhost:5173", "http://localhost:5174"], methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"], allow_headers=["Content-Type", "Authorization", "Upload-Offset", "Upload-Length", "Tus-Resumable", "X-Requested-With"], expose_headers=["Content-Length", "Content-Type", "Upload-Offset", "Upload-Length", "Tus-Resumable", "Location", "ETag"], supports_credentials=True, max_age=3600)
 def init_raw_upload():
     """
     Inicializa upload multipart para R2 (arquivos RAW)
