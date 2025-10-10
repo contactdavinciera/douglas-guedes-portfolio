@@ -76,6 +76,15 @@ def create_app():
         else:
             return send_from_directory(static_folder, 'index.html')
 
+    @app.after_request
+    def add_cors_headers(response):
+        response.headers.add("Access-Control-Allow-Origin", "*")
+        response.headers.add("Access-Control-Allow-Headers", "Content-Type, Authorization, Upload-Offset, Upload-Length, Tus-Resumable")
+        response.headers.add("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH, HEAD")
+        response.headers.add("Access-Control-Expose-Headers", "Upload-Offset, Upload-Length, Tus-Resumable, Location")
+        response.headers.add("Access-Control-Allow-Credentials", "true")
+        return response
+
     return app
 
 app = create_app()
