@@ -6,3 +6,10 @@ __pycache__/
 *.pyc
 
 .env
+
+# Log files from startup scripts
+backend.log
+frontend.log
+
+# Python virtual environment
+color-studio-backend/venv/
