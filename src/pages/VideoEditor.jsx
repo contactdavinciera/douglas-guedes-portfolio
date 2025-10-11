@@ -1260,13 +1260,6 @@ const VideoEditor = () => {
                       </div>
                     </div>
                   ))}
-                  
-                  {/* Maestro Playhead - Baton Style */}
-                  <div
-                    ref={playheadRef}
-                    className="maestro-playhead"
-                    style={{ left: `${(currentTime / duration) * 100 * zoomLevel}%` }}
-                  />
                 </div>
 
                 {/* Timeline Tracks */}
@@ -1345,6 +1338,19 @@ const VideoEditor = () => {
                       </div>
                     </div>
                     ))}
+                    
+                    {/* Maestro Playhead - ALWAYS ON TOP! Rendered LAST */}
+                    <div
+                      className="maestro-playhead"
+                      style={{ 
+                        left: `${(currentTime / duration) * 100 * zoomLevel}%`,
+                        position: 'absolute',
+                        top: 0,
+                        bottom: 0,
+                        zIndex: 999999
+                      }}
+                      title={formatTimecode(currentTime)}
+                    />
                   </div>
                 </div>
 
