@@ -275,10 +275,20 @@ const VideoEditor = () => {
   const handlePlay = async () => {
     if (!maestroPlayer.current) return;
     
-    // Find active clip at current time
-    const activeClip = timelineClips.find(c => 
+    // Find active clip at current time - PRIORITIZE TOP LAYER
+    const activeClips = timelineClips.filter(c => 
       currentTime >= c.startTime && currentTime < c.startTime + c.duration
     );
+    
+    // Sort by track (video tracks first, then by track ID)
+    // V1 > V2 > A1 > A2 (higher priority on top)
+    const sortedClips = activeClips.sort((a, b) => {
+      const aTrack = tracks.findIndex(t => t.id === a.track);
+      const bTrack = tracks.findIndex(t => t.id === b.track);
+      return aTrack - bTrack; // Lower index = higher priority
+    });
+    
+    const activeClip = sortedClips[0]; // Top layer wins
     
     if (activeClip) {
       const mediaFile = mediaBins.find(m => m.id === activeClip.mediaId);
@@ -355,6 +365,78 @@ const VideoEditor = () => {
 
     setTimelineClips([...timelineClips, newClip]);
     setDraggedMedia(null);
+  };
+
+  // Drag clip between tracks
+  const handleClipDragStart = (e, clip) => {
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('clipId', clip.id);
+  };
+
+  const handleClipDrop = (e, targetTrack) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const clipId = e.dataTransfer.getData('clipId');
+    if (!clipId) return;
+
+    // Move clip to new track
+    setTimelineClips(prev => prev.map(clip => 
+      clip.id === clipId ? { ...clip, track: targetTrack } : clip
+    ));
+  };
+
+  // Move clip up/down layers (Alt + Arrow)
+  const moveClipToLayer = (clipId, direction) => {
+    const clip = timelineClips.find(c => c.id === clipId);
+    if (!clip) return;
+
+    const currentTrackIndex = tracks.findIndex(t => t.id === clip.track);
+    const newTrackIndex = currentTrackIndex + (direction === 'up' ? -1 : 1);
+
+    if (newTrackIndex >= 0 && newTrackIndex < tracks.length) {
+      const newTrack = tracks[newTrackIndex];
+      
+      setTimelineClips(prev => prev.map(c => 
+        c.id === clipId ? { ...c, track: newTrack.id } : c
+      ));
+      
+      console.log(`🔼 Moved clip to ${newTrack.id}`);
+    }
+  };
+
+  // Jump to next clip start (Arrow Down)
+  const jumpToNextClip = () => {
+    // Find all clips that start AFTER current time
+    const nextClips = timelineClips
+      .filter(c => c.startTime > currentTime)
+      .sort((a, b) => a.startTime - b.startTime);
+    
+    if (nextClips.length > 0) {
+      const nextClip = nextClips[0];
+      setCurrentTime(nextClip.startTime);
+      setSelectedClip(nextClip.id);
+      console.log(`⬇️ Jumped to next clip: ${nextClip.id} at ${formatTimecode(nextClip.startTime)}`);
+    }
+  };
+
+  // Jump to previous clip start (Arrow Up)
+  const jumpToPreviousClip = () => {
+    // Find all clips that start BEFORE current time
+    const prevClips = timelineClips
+      .filter(c => c.startTime < currentTime)
+      .sort((a, b) => b.startTime - a.startTime);
+    
+    if (prevClips.length > 0) {
+      const prevClip = prevClips[0];
+      setCurrentTime(prevClip.startTime);
+      setSelectedClip(prevClip.id);
+      console.log(`⬆️ Jumped to previous clip: ${prevClip.id} at ${formatTimecode(prevClip.startTime)}`);
+    } else {
+      // If no previous clip, go to start
+      setCurrentTime(0);
+      console.log('⬆️ Jumped to timeline start');
+    }
   };
 
   // Split/Cut clip at playhead
@@ -597,6 +679,17 @@ const VideoEditor = () => {
         }
       }
 
+      // Alt + Arrow keys - Move clip between layers
+      if (e.altKey) {
+        if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+          e.preventDefault();
+          if (selectedClip) {
+            moveClipToLayer(selectedClip, e.key === 'ArrowUp' ? 'up' : 'down');
+          }
+          return;
+        }
+      }
+
       switch (e.key.toLowerCase()) {
         case ' ': // Space - Play/Pause
           e.preventDefault();
@@ -611,6 +704,22 @@ const VideoEditor = () => {
           e.preventDefault();
           setIsPlaying(false);
           setPlaybackSpeed(1);
+          break;
+        case 'arrowup': // Arrow Up - Jump to previous clip start
+          e.preventDefault();
+          jumpToPreviousClip();
+          break;
+        case 'arrowdown': // Arrow Down - Jump to next clip start
+          e.preventDefault();
+          jumpToNextClip();
+          break;
+        case 'arrowleft': // Arrow Left - Previous frame
+          e.preventDefault();
+          setCurrentTime(prev => Math.max(0, prev - (1/24)));
+          break;
+        case 'arrowright': // Arrow Right - Next frame
+          e.preventDefault();
+          setCurrentTime(prev => Math.min(duration, prev + (1/24)));
           break;
         case 'l': // L - Forward play
           e.preventDefault();
@@ -657,13 +766,6 @@ const VideoEditor = () => {
           e.preventDefault();
           handleZoomOut();
           break;
-        case 'arrowleft':
-          e.preventDefault();
-          setCurrentTime(Math.max(0, currentTime - (1/24))); // 1 frame back
-          break;
-        case 'arrowright':
-          e.preventDefault();
-          setCurrentTime(Math.min(duration, currentTime + (1/24))); // 1 frame forward
           break;
         default:
           break;
@@ -674,22 +776,40 @@ const VideoEditor = () => {
     return () => window.removeEventListener('keydown', handleKeyPress);
   }, [isPlaying, currentTime, selectedClip, snapToGrid]);
 
-  // Playback loop
+  // Playback loop - Frame-accurate with requestAnimationFrame
   useEffect(() => {
     if (!isPlaying) return;
 
-    const interval = setInterval(() => {
-      setCurrentTime(prev => {
-        const next = prev + (playbackSpeed * 1/24); // 1 frame step
-        if (next >= duration || next < 0) {
-          setIsPlaying(false);
-          return prev;
-        }
-        return next;
-      });
-    }, 1000 / 24); // 24fps
+    let animationFrameId;
+    let lastTime = performance.now();
+    const frameTime = 1000 / 24; // 24fps = ~41.67ms per frame
 
-    return () => clearInterval(interval);
+    const animate = (currentPerformanceTime) => {
+      const deltaTime = currentPerformanceTime - lastTime;
+
+      if (deltaTime >= frameTime) {
+        setCurrentTime(prev => {
+          const next = prev + (playbackSpeed * 1/24); // 1 frame step
+          if (next >= duration || next < 0) {
+            setIsPlaying(false);
+            return prev;
+          }
+          return next;
+        });
+        
+        lastTime = currentPerformanceTime - (deltaTime % frameTime);
+      }
+
+      animationFrameId = requestAnimationFrame(animate);
+    };
+
+    animationFrameId = requestAnimationFrame(animate);
+
+    return () => {
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+      }
+    };
   }, [isPlaying, playbackSpeed, duration]);
 
   return (
@@ -1166,7 +1286,10 @@ const VideoEditor = () => {
                           opacity: track.muted ? 0.5 : 1
                         }}
                         onDragOver={handleDragOver}
-                        onDrop={(e) => handleDrop(e, track.id)}
+                        onDrop={(e) => {
+                          handleDrop(e, track.id);
+                          handleClipDrop(e, track.id);
+                        }}
                       >
                         {/* Track Controls */}
                         <div className="absolute left-0 top-0 h-full w-16 bg-[#2a2a2a] border-r border-gray-700 flex flex-col items-center justify-center z-10 gap-1">
@@ -1196,14 +1319,16 @@ const VideoEditor = () => {
                           </div>
                         </div>
                       <div className="ml-16 h-full relative">
-                        {timelineClips.filter(c => c.track === 'v1').map(clip => {
+                        {timelineClips.filter(c => c.track === track.id).map(clip => {
                           const media = mediaBins.find(m => m.id === clip.mediaId);
                           const left = (clip.startTime / duration) * 100;
                           const width = (clip.duration / duration) * 100;
                           return (
                             <div
                               key={clip.id}
-                              className={`absolute top-1 bottom-1 rounded cursor-pointer transition-all ${
+                              draggable
+                              onDragStart={(e) => handleClipDragStart(e, clip)}
+                              className={`maestro-clip absolute top-1 bottom-1 rounded cursor-grab active:cursor-grabbing transition-all ${
                                 selectedClip === clip.id 
                                   ? 'ring-2 ring-blue-500 bg-blue-600' 
                                   : 'bg-purple-700 hover:bg-purple-600'
@@ -1211,7 +1336,7 @@ const VideoEditor = () => {
                               style={{ left: `${left}%`, width: `${width}%` }}
                               onClick={() => setSelectedClip(clip.id)}
                             >
-                              <div className="px-2 py-1 text-xs text-white truncate">
+                              <div className="px-2 py-1 text-xs text-white truncate pointer-events-none">
                                 {media?.name || 'Clip'}
                               </div>
                             </div>
