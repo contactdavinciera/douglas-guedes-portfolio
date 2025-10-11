@@ -11,7 +11,9 @@ import MaestroScrubber from '@/components/MaestroScrubber';
 import MediaImportDialog from '@/components/MediaImportDialog';
 import ProjectSettingsDialog from '@/components/ProjectSettingsDialog';
 import TimelineRuler from '@/components/TimelineRuler';
+import TimelineClip from '@/components/TimelineClip';
 import * as EditingFunctions from '@/services/editingFunctions';
+import * as ClipInteractions from '@/services/clipInteractions';
 import {
   ResizableHandle,
   ResizablePanel,
@@ -613,6 +615,36 @@ const VideoEditor = () => {
     setTracks(tracks.map(t => 
       t.id === trackId ? { ...t, solo: !t.solo } : t
     ));
+  };
+
+  // NEW: Professional clip handlers
+  const handleClipMove = (clipId, newTime, newTrack) => {
+    console.log(`Moving clip ${clipId} to ${newTime.toFixed(2)}s on track ${newTrack}`);
+    setTimelineClips(prev => prev.map(c => 
+      c.id === clipId ? { ...c, startTime: newTime, track: newTrack } : c
+    ));
+  };
+
+  const handleClipTrim = (clipId, trimData) => {
+    console.log(`Trimming clip ${clipId}:`, trimData);
+    setTimelineClips(prev => prev.map(c => 
+      c.id === clipId ? { ...c, ...trimData } : c
+    ));
+  };
+
+  const handleClipSelect = (clipId, addToSelection = false) => {
+    if (addToSelection) {
+      // Multi-select with Shift
+      setSelectedClips(prev => 
+        prev.includes(clipId) 
+          ? prev.filter(id => id !== clipId)
+          : [...prev, clipId]
+      );
+    } else {
+      // Single select
+      setSelectedClip(clipId);
+      setSelectedClips([clipId]);
+    }
   };
 
   // Markers
@@ -1386,33 +1418,22 @@ const VideoEditor = () => {
                           </div>
                         </div>
                       <div className="ml-16 h-full relative">
-                        {timelineClips.filter(c => c.track === track.id).map(clip => {
-                          const media = mediaBins.find(m => m.id === clip.mediaId);
-                          const left = (clip.startTime / duration) * 100;
-                          const width = (clip.duration / duration) * 100;
-                          const isAudio = track.type === 'audio';
-                          return (
-                            <div
-                              key={clip.id}
-                              draggable
-                              onDragStart={(e) => handleClipDragStart(e, clip)}
-                              className={`maestro-clip absolute top-1 bottom-1 rounded cursor-grab active:cursor-grabbing transition-all ${
-                                selectedClip === clip.id 
-                                  ? 'ring-2 ring-blue-500 bg-blue-600' 
-                                  : isAudio 
-                                    ? 'bg-green-600 hover:bg-green-500'
-                                    : 'bg-purple-700 hover:bg-purple-600'
-                              }`}
-                              style={{ left: `${left}%`, width: `${width}%` }}
-                              onClick={() => setSelectedClip(clip.id)}
-                            >
-                              <div className="px-2 py-1 text-xs text-white truncate pointer-events-none">
-                                {media?.name || 'Clip'}
-                                <span className="opacity-60 ml-1">{formatTimecode(clip.duration)}</span>
-                              </div>
-                            </div>
-                          );
-                        })}
+                        {/* Professional Timeline Clips with Drag, Snap, Trim */}
+                        {timelineClips.filter(c => c.track === track.id).map(clip => (
+                          <TimelineClip
+                            key={clip.id}
+                            clip={clip}
+                            allClips={timelineClips}
+                            tracks={tracks}
+                            scale={(duration * 100) / (duration * zoomLevel)} // pixels per second
+                            onMove={handleClipMove}
+                            onTrim={handleClipTrim}
+                            onSelect={handleClipSelect}
+                            isSelected={selectedClip === clip.id || selectedClips.includes(clip.id)}
+                            duration={duration}
+                            snapEnabled={snapToGrid}
+                          />
+                        ))}
                       </div>
                     </div>
                     ))}
