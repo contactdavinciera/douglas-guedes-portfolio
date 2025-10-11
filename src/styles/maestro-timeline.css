@@ -1,21 +1,85 @@
-/* MAESTRO TIMELINE - Professional NLE Styles */
+/* MAESTRO - Professional Software Mode (All Panels) */
 
-.maestro-timeline {
+/* Global Software Behavior */
+.maestro-software-mode,
+.maestro-timeline,
+.maestro-panel,
+.maestro-monitor,
+.maestro-media-pool,
+.maestro-effects-panel {
   cursor: default !important;
-  user-select: none;
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+  -webkit-touch-callout: none !important;
+  -webkit-tap-highlight-color: transparent !important;
 }
 
-.maestro-timeline * {
+/* All child elements */
+.maestro-software-mode *,
+.maestro-timeline *,
+.maestro-panel *,
+.maestro-monitor *,
+.maestro-media-pool *,
+.maestro-effects-panel * {
   cursor: default !important;
+  text-decoration: none !important;
+  outline: none !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+}
+
+.maestro-software-mode:hover *,
+.maestro-timeline:hover *,
+.maestro-panel:hover *,
+.maestro-monitor:hover *,
+.maestro-media-pool:hover *,
+.maestro-effects-panel:hover * {
   text-decoration: none !important;
   outline: none !important;
 }
 
-.maestro-timeline:hover * {
-  text-decoration: none !important;
+/* Prevent text selection globally in Maestro */
+.maestro-software-mode::selection,
+.maestro-timeline::selection,
+.maestro-panel::selection,
+.maestro-monitor::selection,
+.maestro-media-pool::selection,
+.maestro-effects-panel::selection {
+  background: transparent !important;
+  color: inherit !important;
+}
+
+.maestro-software-mode *::selection,
+.maestro-timeline *::selection,
+.maestro-panel *::selection,
+.maestro-monitor *::selection,
+.maestro-media-pool *::selection,
+.maestro-effects-panel *::selection {
+  background: transparent !important;
+  color: inherit !important;
+}
+
+/* Firefox */
+.maestro-software-mode::-moz-selection,
+.maestro-timeline::-moz-selection,
+.maestro-panel::-moz-selection,
+.maestro-monitor::-moz-selection,
+.maestro-media-pool::-moz-selection,
+.maestro-effects-panel::-moz-selection {
+  background: transparent !important;
+  color: inherit !important;
+}
+
+.maestro-software-mode *::-moz-selection,
+.maestro-timeline *::-moz-selection,
+.maestro-panel *::-moz-selection,
+.maestro-monitor *::-moz-selection,
+.maestro-media-pool *::-moz-selection,
+.maestro-effects-panel *::-moz-selection {
+  background: transparent !important;
+  color: inherit !important;
 }
 
 /* Timeline Cursor States */
@@ -39,7 +103,33 @@
   cursor: col-resize !important;
 }
 
-/* Playhead - Maestro Baton Style */
+/* Disable context menu in software mode */
+.maestro-software-mode,
+.maestro-timeline,
+.maestro-panel,
+.maestro-monitor,
+.maestro-media-pool {
+  -webkit-touch-callout: none;
+  -webkit-user-drag: none;
+  -khtml-user-drag: none;
+  -moz-user-drag: none;
+  -o-user-drag: none;
+}
+
+/* Disable image dragging */
+.maestro-software-mode img,
+.maestro-timeline img,
+.maestro-panel img,
+.maestro-monitor img,
+.maestro-media-pool img {
+  -webkit-user-drag: none;
+  -khtml-user-drag: none;
+  -moz-user-drag: none;
+  -o-user-drag: none;
+  pointer-events: none;
+}
+
+/* Maestro Playhead - Baton Style */
 .maestro-playhead {
   position: absolute;
   top: 0;
@@ -243,28 +333,68 @@
   box-shadow: 0 0 0 2px rgba(74, 158, 255, 0.3);
 }
 
-/* Remove all site styles from timeline */
+/* Buttons and interactive elements keep their cursor */
+.maestro-software-mode button,
+.maestro-timeline button,
+.maestro-panel button,
+.maestro-monitor button,
+.maestro-media-pool button,
+.maestro-effects-panel button {
+  cursor: pointer !important;
+}
+
+.maestro-software-mode input,
+.maestro-timeline input,
+.maestro-panel input,
+.maestro-monitor input,
+.maestro-media-pool input,
+.maestro-effects-panel input {
+  cursor: text !important;
+  user-select: text !important;
+  -webkit-user-select: text !important;
+}
+
+/* Draggable items */
+.maestro-software-mode [draggable="true"],
+.maestro-media-pool [draggable="true"] {
+  cursor: grab !important;
+}
+
+.maestro-software-mode [draggable="true"]:active,
+.maestro-media-pool [draggable="true"]:active {
+  cursor: grabbing !important;
+}
+
+/* Remove all site styles from panels */
+.maestro-software-mode a,
 .maestro-timeline a,
-.maestro-timeline button:not(.maestro-button),
-.maestro-timeline span,
-.maestro-timeline div {
+.maestro-panel a,
+.maestro-monitor a,
+.maestro-media-pool a,
+.maestro-effects-panel a,
+.maestro-software-mode span:not(button span),
+.maestro-timeline span:not(button span),
+.maestro-panel span:not(button span) {
   text-decoration: none !important;
   cursor: default !important;
 }
 
+.maestro-software-mode a:hover,
 .maestro-timeline a:hover,
-.maestro-timeline button:hover:not(.maestro-button),
-.maestro-timeline span:hover,
-.maestro-timeline div:hover {
+.maestro-panel a:hover,
+.maestro-monitor a:hover,
+.maestro-media-pool a:hover,
+.maestro-effects-panel a:hover {
   text-decoration: none !important;
   outline: none !important;
 }
 
-/* Prevent text selection in timeline */
-.maestro-timeline::selection {
-  background: transparent;
-}
-
-.maestro-timeline::-moz-selection {
-  background: transparent;
+/* Scrollbars keep their functionality */
+.maestro-software-mode::-webkit-scrollbar-thumb,
+.maestro-timeline::-webkit-scrollbar-thumb,
+.maestro-panel::-webkit-scrollbar-thumb,
+.maestro-monitor::-webkit-scrollbar-thumb,
+.maestro-media-pool::-webkit-scrollbar-thumb,
+.maestro-effects-panel::-webkit-scrollbar-thumb {
+  cursor: pointer !important;
 }

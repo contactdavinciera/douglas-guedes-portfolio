@@ -241,9 +241,33 @@ const VideoEditor = () => {
       console.log('🎼 Maestro Player initialized');
     }
     
+    // Prevent text selection on double-click/drag
+    const preventSelection = (e) => {
+      const target = e.target;
+      // Allow selection only in input fields
+      if (target.tagName !== 'INPUT' && target.tagName !== 'TEXTAREA') {
+        e.preventDefault();
+      }
+    };
+
+    const maestroContainer = document.querySelector('.maestro-software-mode');
+    if (maestroContainer) {
+      maestroContainer.addEventListener('selectstart', preventSelection);
+      maestroContainer.addEventListener('dragstart', (e) => {
+        // Allow drag only for draggable items
+        if (!e.target.closest('[draggable="true"]')) {
+          e.preventDefault();
+        }
+      });
+    }
+    
     return () => {
       // Cleanup transcode polling on unmount
       transcodeJobs.forEach(job => clearInterval(job.intervalId));
+      
+      if (maestroContainer) {
+        maestroContainer.removeEventListener('selectstart', preventSelection);
+      }
     };
   }, []);
 
@@ -680,8 +704,8 @@ const VideoEditor = () => {
         formatTimecode={formatTimecode}
       />
       
-      {/* Main Editor Container - Below header */}
-      <div className="w-full max-w-[98vw] h-[calc(100vh-7rem)] mx-auto bg-[#262626] rounded-lg overflow-hidden shadow-2xl flex flex-col">
+      {/* Main Editor Container - Below header - SOFTWARE MODE */}
+      <div className="maestro-software-mode w-full max-w-[98vw] h-[calc(100vh-7rem)] mx-auto bg-[#262626] rounded-lg overflow-hidden shadow-2xl flex flex-col">
         
         {/* Top Bar */}
         <div className="h-12 bg-[#1a1a1a] border-b border-gray-700 flex items-center justify-between px-4">
@@ -748,7 +772,7 @@ const VideoEditor = () => {
                 
                 {/* Media Pool / Bins + Effects - Increased size */}
                 <ResizablePanel defaultSize={22} minSize={18}>
-                  <div className="h-full bg-[#1e1e1e] border-r border-gray-700 flex flex-col">
+                  <div className="maestro-media-pool h-full bg-[#1e1e1e] border-r border-gray-700 flex flex-col">
                     <div className="h-10 bg-[#252525] border-b border-gray-700 flex items-center justify-between px-2">
                       <div className="flex gap-2">
                         <button
@@ -892,8 +916,8 @@ const VideoEditor = () => {
 
                 {/* Source Monitor */}
                 <ResizablePanel defaultSize={40} minSize={30}>
-                  <div className="h-full bg-[#1e1e1e] border-r border-gray-700 flex flex-col">
-                    <div className="h-10 bg-[#252525] border-b border-gray-700 flex items-center justify-between px-3">
+                  <div className="maestro-monitor h-full bg-[#1e1e1e] border-r border-gray-700 flex flex-col">
+                    <div className="maestro-panel h-10 bg-[#252525] border-b border-gray-700 flex items-center justify-between px-3">
                       <span className="text-gray-300 text-sm font-semibold">Source Monitor</span>
                       <div className="flex gap-1">
                         <Button size="icon" variant="ghost" className="h-7 w-7 text-gray-400">
@@ -923,8 +947,8 @@ const VideoEditor = () => {
 
                 {/* Program Monitor (Timeline Output) */}
                 <ResizablePanel defaultSize={40} minSize={30}>
-                  <div className="h-full bg-[#1e1e1e] flex flex-col">
-                    <div className="h-10 bg-[#252525] border-b border-gray-700 flex items-center justify-between px-3">
+                  <div className="maestro-monitor h-full bg-[#1e1e1e] flex flex-col">
+                    <div className="maestro-panel h-10 bg-[#252525] border-b border-gray-700 flex items-center justify-between px-3">
                       <span className="text-gray-300 text-sm font-semibold">Program Monitor</span>
                       <div className="flex gap-1">
                         <Button size="icon" variant="ghost" className="h-7 w-7 text-gray-400">
