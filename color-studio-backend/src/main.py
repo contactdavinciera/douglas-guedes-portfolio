@@ -178,6 +178,12 @@ def create_app():
     except ImportError:
         conversion_bp = None
         print("⚠️ Warning: conversion_routes not found")
+    
+    try:
+        from src.routes.subtitle_routes import subtitle_bp
+    except ImportError:
+        subtitle_bp = None
+        print("⚠️ Warning: subtitle_routes not found")
 
     # ==========================================
     # REGISTRAR BLUEPRINTS
@@ -188,6 +194,8 @@ def create_app():
     app.register_blueprint(pricing_bp, url_prefix='/api/pricing')
     app.register_blueprint(colorist_bp, url_prefix='/api/colorist')
     app.register_blueprint(conversion_bp, url_prefix='/api/conversion')
+    if subtitle_bp:
+        app.register_blueprint(subtitle_bp)
 
     # ==========================================
     # CRIAR TABELAS

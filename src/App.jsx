@@ -14,6 +14,7 @@ import ProColorGradingStudio from './pages/ProColorGradingStudio'
 import Maestro from './pages/Maestro'
 import VideoEditor from './pages/VideoEditor'
 import PricingCalculator from './pages/PricingCalculator'
+import Marketplace from './pages/Marketplace'
 import './App.css'
 
 console.log('App.jsx loaded - Version 2.2'); // Para verificar o deploy
@@ -37,6 +38,7 @@ function App() {
             <Route path="/video-editor" element={<VideoEditor />} />
             <Route path="/pricing" element={<PricingCalculator />} />
             <Route path="/maestro" element={<Maestro />} />
+            <Route path="/marketplace" element={<Marketplace />} />
           </Routes>
         </main>
         <Footer />
