@@ -3,6 +3,8 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import '../styles/maestro-timeline.css';
+import { importMedia, pollTranscodeStatus } from '@/services/mediaImporter';
+import MaestroPlayer from '@/services/maestroPlayer';
 import {
   ResizableHandle,
   ResizablePanel,
@@ -79,10 +81,13 @@ const VideoEditor = () => {
   const [showEffectsPanel, setShowEffectsPanel] = useState(false);
   const [mediaViewMode, setMediaViewMode] = useState('list'); // 'list' or 'thumbnails'
   const [mediaSortBy, setMediaSortBy] = useState('name'); // 'name', 'duration', 'type'
+  const [uploadProgress, setUploadProgress] = useState(null); // { filename, progress }
+  const [transcodeJobs, setTranscodeJobs] = useState([]); // Active transcode jobs
 
   // Refs
   const timelineRef = useRef(null);
   const playheadRef = useRef(null);
+  const maestroPlayer = useRef(null);
 
   // Timecode formatting
   const formatTimecode = (seconds) => {
@@ -125,6 +130,168 @@ const VideoEditor = () => {
       return sorted.sort((a, b) => a.type.localeCompare(b.type));
     }
     return sorted;
+  };
+
+  // Import Media - Maestro Pipeline
+  const handleImportMedia = async () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'video/*,audio/*';
+    input.multiple = true;
+    
+    input.onchange = async (e) => {
+      const files = Array.from(e.target.files);
+      
+      for (const file of files) {
+        try {
+          console.log(`🎬 Importing: ${file.name}`);
+          
+          setUploadProgress({ filename: file.name, progress: 0 });
+          
+          // Import with auto-detection
+          const media = await importMedia(file);
+          
+          console.log('✅ Media imported:', media);
+          
+          // Add to media pool
+          setMediaBins(prev => [...prev, {
+            id: media.id || Date.now(),
+            name: media.name,
+            duration: media.duration || 0,
+            type: media.type === 'proxy-ready' || media.codec.includes('h264') ? 'video' : 'video',
+            thumbnail: media.thumbnailURL || null,
+            ...media
+          }]);
+          
+          // If transcoding, start polling
+          if (media.type === 'transcoding') {
+            startTranscodePolling(media.jobId, media);
+          }
+          
+          setUploadProgress(null);
+          
+        } catch (error) {
+          console.error('❌ Import failed:', error);
+          setUploadProgress(null);
+          alert(`Failed to import ${file.name}: ${error.message}`);
+        }
+      }
+    };
+    
+    input.click();
+  };
+
+  // Poll transcode status
+  const startTranscodePolling = (jobId, media) => {
+    const intervalId = setInterval(async () => {
+      try {
+        const status = await pollTranscodeStatus(jobId);
+        
+        console.log(`⚙️ Transcode progress: ${status.progress}%`);
+        
+        // Update media bin status
+        setMediaBins(prev => prev.map(m => 
+          m.id === media.id 
+            ? { ...m, status: status.status, progress: status.progress }
+            : m
+        ));
+        
+        // If complete, stop polling
+        if (status.status === 'completed') {
+          console.log('✅ Transcode complete!');
+          clearInterval(intervalId);
+          
+          // Update with final URLs
+          setMediaBins(prev => prev.map(m => 
+            m.id === media.id 
+              ? { 
+                  ...m, 
+                  status: 'ready',
+                  playbackURL: status.playbackURL,
+                  thumbnailURL: status.thumbnailURL
+                }
+              : m
+          ));
+        }
+        
+        if (status.status === 'failed') {
+          console.error('❌ Transcode failed');
+          clearInterval(intervalId);
+        }
+        
+      } catch (error) {
+        console.error('Poll error:', error);
+        clearInterval(intervalId);
+      }
+    }, 3000); // Poll every 3 seconds
+    
+    // Store interval ID to clear later
+    setTranscodeJobs(prev => [...prev, { jobId, intervalId }]);
+  };
+
+  // Initialize Maestro Player
+  useEffect(() => {
+    if (!maestroPlayer.current) {
+      maestroPlayer.current = new MaestroPlayer();
+      console.log('🎼 Maestro Player initialized');
+    }
+    
+    return () => {
+      // Cleanup transcode polling on unmount
+      transcodeJobs.forEach(job => clearInterval(job.intervalId));
+    };
+  }, []);
+
+  // Playback Functions
+  const handlePlay = async () => {
+    if (!maestroPlayer.current) return;
+    
+    // Find active clip at current time
+    const activeClip = timelineClips.find(c => 
+      currentTime >= c.startTime && currentTime < c.startTime + c.duration
+    );
+    
+    if (activeClip) {
+      const mediaFile = mediaBins.find(m => m.id === activeClip.mediaId);
+      
+      if (mediaFile) {
+        try {
+          const player = await maestroPlayer.current.loadClip(activeClip.id, mediaFile);
+          
+          // Seek to correct position in clip
+          const clipTime = currentTime - activeClip.startTime + activeClip.inPoint;
+          player.seek(clipTime);
+          
+          // Play
+          await player.play();
+          setIsPlaying(true);
+          
+        } catch (error) {
+          console.error('Playback error:', error);
+        }
+      }
+    }
+  };
+
+  const handlePause = () => {
+    setIsPlaying(false);
+    // Maestro player will handle pause
+  };
+
+  const handleSeek = async (time) => {
+    setCurrentTime(time);
+    
+    // If playing, seek active player
+    if (maestroPlayer.current?.currentPlayer) {
+      const activeClip = timelineClips.find(c => 
+        time >= c.startTime && time < c.startTime + c.duration
+      );
+      
+      if (activeClip) {
+        const clipTime = time - activeClip.startTime + activeClip.inPoint;
+        maestroPlayer.current.currentPlayer.seek(clipTime);
+      }
+    }
   };
 
   // Drag & Drop handlers
@@ -510,7 +677,12 @@ const VideoEditor = () => {
                 <FolderOpen className="w-4 h-4 mr-2" />
                 New Project
               </Button>
-              <Button size="sm" variant="ghost" className="text-gray-400 hover:text-white hover:bg-[#2a2a2a]">
+              <Button 
+                size="sm" 
+                variant="ghost" 
+                className="text-gray-400 hover:text-white hover:bg-[#2a2a2a]"
+                onClick={handleImportMedia}
+              >
                 <Upload className="w-4 h-4 mr-2" />
                 Import Media
               </Button>
@@ -539,6 +711,14 @@ const VideoEditor = () => {
             <div className="text-green-400 text-sm font-mono">
               {formatTimecode(currentTime)} / {formatTimecode(duration)}
             </div>
+            
+            {/* Upload Progress */}
+            {uploadProgress && (
+              <div className="flex items-center gap-2 text-xs text-blue-400">
+                <div className="animate-spin">⚙️</div>
+                <span>Uploading: {uploadProgress.filename}</span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -809,13 +989,13 @@ const VideoEditor = () => {
                   </div>
                 </div>
 
-                {/* Professional Timecode Ruler */}
+                {/* Professional Timecode Ruler - DaVinci Style */}
                 <div className="maestro-ruler" onClick={handleTimelineClick}>
                   <div 
                     className="absolute inset-0 overflow-hidden"
                     style={{ width: '100%' }}
                   >
-                    {/* Major ticks (every 10 seconds) */}
+                    {/* Major ticks (every 10 seconds) with timecode */}
                     {Array.from({ length: Math.ceil(duration / 10) + 1 }).map((_, i) => (
                       <React.Fragment key={`major-${i}`}>
                         <div 
@@ -828,17 +1008,40 @@ const VideoEditor = () => {
                         >
                           {formatTimecode(i * 10)}
                         </div>
+                        {/* Frame number below timecode */}
+                        {zoomLevel > 5 && (
+                          <div 
+                            className="maestro-ruler-label frame-number"
+                            style={{ left: `${(i * 10 / duration) * 100 * zoomLevel}%` }}
+                          >
+                            {Math.floor(i * 10 * 24)}
+                          </div>
+                        )}
                       </React.Fragment>
                     ))}
                     
                     {/* Minor ticks (every second) */}
-                    {zoomLevel > 2 && Array.from({ length: Math.ceil(duration) }).map((_, i) => {
+                    {zoomLevel > 1.5 && Array.from({ length: Math.ceil(duration) }).map((_, i) => {
                       if (i % 10 === 0) return null; // Skip major ticks
                       return (
                         <div 
                           key={`minor-${i}`}
                           className="maestro-ruler-tick minor"
                           style={{ left: `${(i / duration) * 100 * zoomLevel}%` }}
+                        />
+                      );
+                    })}
+                    
+                    {/* Micro ticks (frames) - only at high zoom */}
+                    {zoomLevel > 4 && Array.from({ length: Math.ceil(duration * 24) }).map((_, i) => {
+                      const sec = i / 24;
+                      // Skip if it's a major or minor tick
+                      if (sec % 10 === 0 || sec % 1 === 0) return null;
+                      return (
+                        <div 
+                          key={`micro-${i}`}
+                          className="maestro-ruler-tick micro"
+                          style={{ left: `${(sec / duration) * 100 * zoomLevel}%` }}
                         />
                       );
                     })}
