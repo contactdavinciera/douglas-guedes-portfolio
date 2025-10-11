@@ -18,15 +18,15 @@ import PricingCalculator from './pages/PricingCalculator'
 import Marketplace from './pages/Marketplace'
 import './App.css'
 
-console.log('🎼 MAESTRO - App.jsx loaded - Version 2.3');
+console.log('🎼 MAESTRO - App.jsx loaded - Version 2.4');
 
 function App() {
   console.log('🎼 MAESTRO - App component rendering...');
   
   return (
-      <div className="min-h-screen bg-black text-white">
+      <div className="min-h-screen bg-black text-white" style={{ minHeight: '100vh', background: '#000', color: '#fff' }}>
         <Header />
-        <main>
+        <main style={{ padding: '20px' }}>
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/portfolio" element={<Portfolio />} />
