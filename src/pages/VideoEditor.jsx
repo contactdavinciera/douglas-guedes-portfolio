@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
+import '../styles/maestro-timeline.css';
 import {
   ResizableHandle,
   ResizablePanel,
@@ -503,7 +504,7 @@ const VideoEditor = () => {
         {/* Top Bar */}
         <div className="h-12 bg-[#1a1a1a] border-b border-gray-700 flex items-center justify-between px-4">
           <div className="flex items-center gap-4">
-            <span className="text-white font-semibold">Pro Studio Editor</span>
+            <span className="text-white font-semibold text-lg">🎼 Maestro</span>
             <div className="flex gap-2">
               <Button size="sm" variant="ghost" className="text-gray-400 hover:text-white hover:bg-[#2a2a2a]">
                 <FolderOpen className="w-4 h-4 mr-2" />
@@ -766,73 +767,103 @@ const VideoEditor = () => {
 
             {/* Bottom Section - Timeline - Increased space */}
             <ResizablePanel defaultSize={50} minSize={35}>
-              <div className="h-full bg-[#1e1e1e] flex flex-col">
+              <div className="h-full bg-[#1e1e1e] flex flex-col maestro-timeline">
                 
-                {/* Timeline Header */}
+                {/* Timeline Header with Zoom Slider */}
                 <div className="h-10 bg-[#252525] border-b border-gray-700 flex items-center justify-between px-3">
-                  <span className="text-gray-300 text-sm font-semibold">Timeline</span>
-                  <div className="flex items-center gap-2">
-                    <Button 
-                      size="icon" 
-                      variant="ghost" 
-                      className="h-7 w-7 text-gray-400"
-                      onClick={handleZoomOut}
-                    >
-                      <ZoomOut className="w-3 h-3" />
-                    </Button>
-                    <div className="text-xs text-gray-500 w-12 text-center">
-                      {Math.round(zoomLevel * 100)}%
+                  <span className="text-gray-300 text-sm font-semibold">🎼 Timeline</span>
+                  <div className="flex items-center gap-4">
+                    {/* Zoom Slider */}
+                    <div className="flex items-center gap-2">
+                      <Button 
+                        size="icon" 
+                        variant="ghost" 
+                        className="h-7 w-7 text-gray-400 maestro-button"
+                        onClick={handleZoomOut}
+                      >
+                        <ZoomOut className="w-3 h-3" />
+                      </Button>
+                      <div className="maestro-zoom-slider">
+                        <div className="maestro-zoom-track" />
+                        <div 
+                          className="maestro-zoom-fill" 
+                          style={{ width: `${((zoomLevel - 0.5) / 9.5) * 100}%` }}
+                        />
+                        <div 
+                          className="maestro-zoom-thumb" 
+                          style={{ left: `${((zoomLevel - 0.5) / 9.5) * 100}%` }}
+                        />
+                      </div>
+                      <Button 
+                        size="icon" 
+                        variant="ghost" 
+                        className="h-7 w-7 text-gray-400 maestro-button"
+                        onClick={handleZoomIn}
+                      >
+                        <ZoomIn className="w-3 h-3" />
+                      </Button>
+                      <div className="text-xs text-gray-400 w-12 text-center font-mono">
+                        {Math.round(zoomLevel * 100)}%
+                      </div>
                     </div>
-                    <Button 
-                      size="icon" 
-                      variant="ghost" 
-                      className="h-7 w-7 text-gray-400"
-                      onClick={handleZoomIn}
-                    >
-                      <ZoomIn className="w-3 h-3" />
-                    </Button>
                   </div>
                 </div>
 
-                {/* Timeline Ruler with Markers */}
-                <div className="h-8 bg-[#2a2a2a] border-b border-gray-700 relative">
+                {/* Professional Timecode Ruler */}
+                <div className="maestro-ruler" onClick={handleTimelineClick}>
                   <div 
-                    className="h-full flex items-end"
-                    style={{ width: `${100 * zoomLevel}%` }}
+                    className="absolute inset-0 overflow-hidden"
+                    style={{ width: '100%' }}
                   >
-                    {Array.from({ length: Math.ceil(duration / 10) }).map((_, i) => (
-                      <div key={i} className="flex-1 border-l border-gray-600 relative">
-                        <span className="absolute top-0 left-1 text-[10px] text-gray-400 font-mono">
+                    {/* Major ticks (every 10 seconds) */}
+                    {Array.from({ length: Math.ceil(duration / 10) + 1 }).map((_, i) => (
+                      <React.Fragment key={`major-${i}`}>
+                        <div 
+                          className="maestro-ruler-tick major"
+                          style={{ left: `${(i * 10 / duration) * 100 * zoomLevel}%` }}
+                        />
+                        <div 
+                          className="maestro-ruler-label"
+                          style={{ left: `${(i * 10 / duration) * 100 * zoomLevel}%` }}
+                        >
                           {formatTimecode(i * 10)}
-                        </span>
-                        {/* Minor ticks */}
-                        {Array.from({ length: 9 }).map((_, j) => (
-                          <div
-                            key={j}
-                            className="absolute h-2 border-l border-gray-700"
-                            style={{ left: `${((j + 1) / 10) * 100}%` }}
-                          />
-                        ))}
-                      </div>
+                        </div>
+                      </React.Fragment>
                     ))}
+                    
+                    {/* Minor ticks (every second) */}
+                    {zoomLevel > 2 && Array.from({ length: Math.ceil(duration) }).map((_, i) => {
+                      if (i % 10 === 0) return null; // Skip major ticks
+                      return (
+                        <div 
+                          key={`minor-${i}`}
+                          className="maestro-ruler-tick minor"
+                          style={{ left: `${(i / duration) * 100 * zoomLevel}%` }}
+                        />
+                      );
+                    })}
                   </div>
                   
                   {/* Markers */}
                   {markers.map(marker => (
                     <div
                       key={marker.id}
-                      className="absolute top-0 h-full w-1 cursor-pointer group"
+                      className="absolute top-0 h-full w-1 cursor-pointer group z-30"
                       style={{ 
-                        left: `${(marker.time / duration) * 100}%`,
+                        left: `${(marker.time / duration) * 100 * zoomLevel}%`,
                         backgroundColor: marker.color === 'red' ? '#ef4444' :
                                        marker.color === 'blue' ? '#3b82f6' :
                                        marker.color === 'green' ? '#22c55e' :
                                        marker.color === 'yellow' ? '#eab308' :
                                        marker.color === 'purple' ? '#a855f7' : '#f97316'
                       }}
-                      onClick={() => handleMarkerClick(marker.time)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleMarkerClick(marker.time);
+                      }}
                       onContextMenu={(e) => {
                         e.preventDefault();
+                        e.stopPropagation();
                         handleDeleteMarker(marker.id);
                       }}
                       title={`${marker.label} - Right-click to delete`}
@@ -846,21 +877,18 @@ const VideoEditor = () => {
                                          marker.color === 'purple' ? '#a855f7' : '#f97316'
                         }}
                       />
-                      {/* Tooltip */}
-                      <div className="absolute top-6 left-1/2 -translate-x-1/2 bg-black text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50">
+                      <div className="absolute top-6 left-1/2 -translate-x-1/2 bg-black text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">
                         {marker.label}
                       </div>
                     </div>
                   ))}
                   
-                  {/* Playhead */}
+                  {/* Maestro Playhead - Baton Style */}
                   <div
                     ref={playheadRef}
-                    className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-20 cursor-ew-resize"
-                    style={{ left: `${(currentTime / duration) * 100}%` }}
-                  >
-                    <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-3 h-3 bg-red-500 rotate-45" />
-                  </div>
+                    className="maestro-playhead"
+                    style={{ left: `${(currentTime / duration) * 100 * zoomLevel}%` }}
+                  />
                 </div>
 
                 {/* Timeline Tracks */}
