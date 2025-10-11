@@ -129,57 +129,58 @@
   pointer-events: none;
 }
 
-/* Maestro Playhead - TRUE CONDUCTOR'S BATON! */
+/* Maestro Playhead - GOLDEN BATON (50% thinner) */
 .maestro-playhead {
   position: absolute;
   top: 0;
   bottom: 0;
-  width: 3px;
+  width: 1.5px; /* 50% thinner (was 3px) */
   background: linear-gradient(
     to bottom,
-    rgba(255, 255, 255, 0) 0%,
-    rgba(255, 255, 255, 0.1) 5%,
-    #ffffff 15%,
-    #f0f0f0 85%,
-    #d0d0d0 100%
+    rgba(255, 215, 0, 0) 0%,
+    rgba(255, 215, 0, 0.1) 5%,
+    #FFD700 15%,      /* Gold */
+    #FFC107 50%,      /* Amber gold */
+    #FFB300 85%,      /* Deep gold */
+    #FF8F00 100%
   );
   z-index: 999999 !important; /* MAXIMUM Z-INDEX - ALWAYS ON TOP! */
   pointer-events: none;
   box-shadow: 
-    0 0 12px rgba(255, 255, 255, 0.8),
-    0 0 24px rgba(255, 255, 255, 0.4),
-    0 0 36px rgba(255, 255, 255, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    0 0 8px rgba(255, 215, 0, 0.8),
+    0 0 16px rgba(255, 215, 0, 0.5),
+    0 0 24px rgba(255, 215, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
   transition: left 0.016s linear; /* 60fps smooth */
-  border-radius: 2px;
+  border-radius: 1px;
   transform-origin: top center;
-  animation: batonGlow 2s ease-in-out infinite;
+  animation: batonGlowGold 2s ease-in-out infinite;
 }
 
-/* Baton Handle (Top) - Spherical */
+/* Baton Handle (Top) - Golden Spherical */
 .maestro-playhead::before {
   content: '';
   position: absolute;
   top: -14px;
   left: 50%;
   transform: translateX(-50%);
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   background: radial-gradient(
     circle at 30% 30%,
-    #ffffff,
-    #f5f5f5 30%,
-    #e0e0e0 60%,
-    #1a1a1a 100%
+    #FFEB3B,      /* Bright gold highlight */
+    #FFD700 30%,  /* Pure gold */
+    #FFC107 60%,  /* Amber gold */
+    #FF8F00 100%  /* Deep gold shadow */
   );
   border-radius: 50%;
   box-shadow: 
-    0 4px 12px rgba(0, 0, 0, 0.8),
-    inset -2px -2px 4px rgba(0, 0, 0, 0.4),
-    inset 2px 2px 4px rgba(255, 255, 255, 0.6),
-    0 0 20px rgba(255, 255, 255, 0.6);
+    0 4px 12px rgba(255, 165, 0, 0.8),
+    inset -2px -2px 4px rgba(139, 69, 19, 0.4),
+    inset 2px 2px 4px rgba(255, 255, 200, 0.6),
+    0 0 20px rgba(255, 215, 0, 0.8);
   z-index: 1;
-  border: 2px solid rgba(255, 255, 255, 0.3);
+  border: 2px solid rgba(255, 215, 0, 0.5);
 }
 
 /* Baton Glow Effect */
@@ -200,21 +201,21 @@
   pointer-events: none;
 }
 
-/* Subtle pulsing animation */
-@keyframes batonGlow {
+/* Golden pulsing animation */
+@keyframes batonGlowGold {
   0%, 100% {
     box-shadow: 
-      0 0 12px rgba(255, 255, 255, 0.8),
-      0 0 24px rgba(255, 255, 255, 0.4),
-      0 0 36px rgba(255, 255, 255, 0.2),
-      inset 0 1px 0 rgba(255, 255, 255, 0.8);
+      0 0 8px rgba(255, 215, 0, 0.8),
+      0 0 16px rgba(255, 215, 0, 0.5),
+      0 0 24px rgba(255, 215, 0, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.6);
   }
   50% {
     box-shadow: 
-      0 0 16px rgba(255, 255, 255, 1),
-      0 0 32px rgba(255, 255, 255, 0.6),
-      0 0 48px rgba(255, 255, 255, 0.3),
-      inset 0 1px 0 rgba(255, 255, 255, 1);
+      0 0 12px rgba(255, 215, 0, 1),
+      0 0 24px rgba(255, 215, 0, 0.7),
+      0 0 36px rgba(255, 215, 0, 0.4),
+      inset 0 1px 0 rgba(255, 255, 255, 0.8);
   }
 }
 
@@ -390,6 +391,72 @@
 .maestro-clip.selected {
   border-color: #4a9eff;
   box-shadow: 0 0 0 2px rgba(74, 158, 255, 0.3);
+}
+
+/* Audio clips - GREEN */
+.maestro-clip[data-type="audio"] {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+  border-color: #047857;
+}
+
+.maestro-clip[data-type="audio"]:hover {
+  background: linear-gradient(135deg, #34d399 0%, #10b981 100%) !important;
+}
+
+.maestro-clip[data-type="audio"].selected {
+  border-color: #10b981;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.3);
+}
+
+/* Video clips - Purple/Blue (default) */
+.maestro-clip[data-type="video"] {
+  background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+  border-color: #6d28d9;
+}
+
+/* IN/OUT Points Markers */
+.maestro-in-out-range {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.1);
+  border-left: 2px solid #ffffff;
+  border-right: 2px solid #ffffff;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.maestro-in-marker,
+.maestro-out-marker {
+  position: absolute;
+  top: 0;
+  width: 2px;
+  height: 100%;
+  background: #ffffff;
+  pointer-events: none;
+  z-index: 15;
+}
+
+.maestro-in-marker::before {
+  content: 'IN';
+  position: absolute;
+  top: -20px;
+  left: 4px;
+  font-size: 10px;
+  color: #ffffff;
+  font-weight: bold;
+  text-shadow: 0 0 4px rgba(0,0,0,0.8);
+}
+
+.maestro-out-marker::before {
+  content: 'OUT';
+  position: absolute;
+  top: -20px;
+  right: 4px;
+  font-size: 10px;
+  color: #ffffff;
+  font-weight: bold;
+  text-shadow: 0 0 4px rgba(0,0,0,0.8);
 }
 
 /* Buttons and interactive elements keep their cursor */

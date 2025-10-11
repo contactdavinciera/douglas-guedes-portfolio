@@ -8,6 +8,8 @@ import { importMedia, pollTranscodeStatus } from '@/services/mediaImporter';
 import MaestroPlayer from '@/services/maestroPlayer';
 import MaestroWaveform from '@/components/MaestroWaveform';
 import MaestroScrubber from '@/components/MaestroScrubber';
+import MediaImportDialog from '@/components/MediaImportDialog';
+import * as EditingFunctions from '@/services/editingFunctions';
 import {
   ResizableHandle,
   ResizablePanel,
@@ -64,6 +66,10 @@ const VideoEditor = () => {
   const [clipboard, setClipboard] = useState(null); // Copy/paste
   const [proxyMode, setProxyMode] = useState(true); // Performance
   const [showScopes, setShowScopes] = useState(false); // Waveform/Vectorscope
+  const [inPoint, setInPoint] = useState(null); // IN point for selection
+  const [outPoint, setOutPoint] = useState(null); // OUT point for selection
+  const [copiedSelection, setCopiedSelection] = useState(null); // Copied IN/OUT range
+  const [showImportDialog, setShowImportDialog] = useState(false); // Media import modal
   const [markers, setMarkers] = useState([
     { id: 'm1', time: 30, color: 'red', label: 'Start Scene 1', type: 'comment' },
     { id: 'm2', time: 75, color: 'green', label: 'Music Cue', type: 'audio' },
@@ -1316,6 +1322,7 @@ const VideoEditor = () => {
                           const media = mediaBins.find(m => m.id === clip.mediaId);
                           const left = (clip.startTime / duration) * 100;
                           const width = (clip.duration / duration) * 100;
+                          const isAudio = track.type === 'audio';
                           return (
                             <div
                               key={clip.id}
@@ -1324,13 +1331,16 @@ const VideoEditor = () => {
                               className={`maestro-clip absolute top-1 bottom-1 rounded cursor-grab active:cursor-grabbing transition-all ${
                                 selectedClip === clip.id 
                                   ? 'ring-2 ring-blue-500 bg-blue-600' 
-                                  : 'bg-purple-700 hover:bg-purple-600'
+                                  : isAudio 
+                                    ? 'bg-green-600 hover:bg-green-500'
+                                    : 'bg-purple-700 hover:bg-purple-600'
                               }`}
                               style={{ left: `${left}%`, width: `${width}%` }}
                               onClick={() => setSelectedClip(clip.id)}
                             >
                               <div className="px-2 py-1 text-xs text-white truncate pointer-events-none">
                                 {media?.name || 'Clip'}
+                                <span className="opacity-60 ml-1">{formatTimecode(clip.duration)}</span>
                               </div>
                             </div>
                           );
