@@ -892,7 +892,7 @@ const VideoEditor = () => {
 
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [isPlaying, currentTime, selectedClip, snapToGrid]);
+  }, [isPlaying, currentTime, selectedClip, snapToGrid, timelineClips, inPoint, outPoint, copiedSelection, projectSettings]);
 
   // Playback loop - Frame-accurate with PROJECT FRAMERATE
   useEffect(() => {

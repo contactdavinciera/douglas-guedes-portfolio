@@ -184,6 +184,12 @@ export const razorCut = (currentTime, clips, setClips, selectedClipIds = null) =
 // Jump to Next/Previous Edit Point (Arrow Up/Down)
 // PROFESSIONAL: Snaps to exact edit points (start/end of clips)
 export const jumpToClip = (direction, currentTime, clips, setCurrentTime, setSelectedClip) => {
+  console.log(`🎯 jumpToClip called:`, { 
+    direction, 
+    currentTime: currentTime.toFixed(2), 
+    clipCount: clips.length 
+  });
+
   // Get ALL edit points (start and end of each clip)
   const editPoints = [];
   
@@ -202,6 +208,8 @@ export const jumpToClip = (direction, currentTime, clips, setCurrentTime, setSel
     });
   });
 
+  console.log(`📍 Edit points found:`, editPoints.map(p => `${p.time.toFixed(2)}s (${p.type})`));
+
   // Remove duplicates and sort
   const uniquePoints = Array.from(
     new Set(editPoints.map(p => p.time))
@@ -211,6 +219,8 @@ export const jumpToClip = (direction, currentTime, clips, setCurrentTime, setSel
   if (!uniquePoints.includes(0)) {
     uniquePoints.unshift(0);
   }
+
+  console.log(`✅ Unique edit points:`, uniquePoints.map(t => t.toFixed(2)));
 
   const THRESHOLD = 0.01; // 10ms threshold for "same position"
 
