@@ -13,15 +13,17 @@ import BatchPricingCalculatorPage from './pages/BatchPricingCalculatorPage'
 import ProColorGradingStudio from './pages/ProColorGradingStudio'
 import Maestro from './pages/Maestro'
 import VideoEditor from './pages/VideoEditor'
+import VideoEditorTest from './pages/VideoEditorTest'
 import PricingCalculator from './pages/PricingCalculator'
 import Marketplace from './pages/Marketplace'
 import './App.css'
 
-console.log('App.jsx loaded - Version 2.2'); // Para verificar o deploy
+console.log('🎼 MAESTRO - App.jsx loaded - Version 2.3');
 
 function App() {
+  console.log('🎼 MAESTRO - App component rendering...');
+  
   return (
-
       <div className="min-h-screen bg-black text-white">
         <Header />
         <main>
@@ -35,6 +37,7 @@ function App() {
             <Route path="/color-studio/:mediaFileId" element={<ColorStudio />} />
             <Route path="/dashboard" element={<ClientDashboard />} />
             <Route path="/pro-studio" element={<ProColorGradingStudio />} />
+            <Route path="/video-editor-test" element={<VideoEditorTest />} />
             <Route path="/video-editor" element={<VideoEditor />} />
             <Route path="/pricing" element={<PricingCalculator />} />
             <Route path="/maestro" element={<Maestro />} />
