@@ -23,7 +23,13 @@ import {
   Plus,
   Copy,
   Layers,
-  Zap
+  Zap,
+  List,
+  Grid,
+  SortAsc,
+  FolderOpen,
+  FileVideo,
+  FileAudio
 } from 'lucide-react';
 
 const VideoEditor = () => {
@@ -70,6 +76,8 @@ const VideoEditor = () => {
   ]);
   const [nestedSequences, setNestedSequences] = useState([]);
   const [showEffectsPanel, setShowEffectsPanel] = useState(false);
+  const [mediaViewMode, setMediaViewMode] = useState('list'); // 'list' or 'thumbnails'
+  const [mediaSortBy, setMediaSortBy] = useState('name'); // 'name', 'duration', 'type'
 
   // Refs
   const timelineRef = useRef(null);
@@ -103,6 +111,19 @@ const VideoEditor = () => {
     if (!snapToGrid) return time;
     const snapInterval = 1 / 24; // 1 frame at 24fps
     return Math.round(time / snapInterval) * snapInterval;
+  };
+
+  // Sort media bins
+  const getSortedMediaBins = () => {
+    const sorted = [...mediaBins];
+    if (mediaSortBy === 'name') {
+      return sorted.sort((a, b) => a.name.localeCompare(b.name));
+    } else if (mediaSortBy === 'duration') {
+      return sorted.sort((a, b) => b.duration - a.duration);
+    } else if (mediaSortBy === 'type') {
+      return sorted.sort((a, b) => a.type.localeCompare(b.type));
+    }
+    return sorted;
   };
 
   // Drag & Drop handlers
@@ -484,13 +505,21 @@ const VideoEditor = () => {
           <div className="flex items-center gap-4">
             <span className="text-white font-semibold">Pro Studio Editor</span>
             <div className="flex gap-2">
-              <Button size="sm" variant="ghost" className="text-gray-400 hover:text-white">
+              <Button size="sm" variant="ghost" className="text-gray-400 hover:text-white hover:bg-[#2a2a2a]">
+                <FolderOpen className="w-4 h-4 mr-2" />
+                New Project
+              </Button>
+              <Button size="sm" variant="ghost" className="text-gray-400 hover:text-white hover:bg-[#2a2a2a]">
+                <Upload className="w-4 h-4 mr-2" />
+                Import Media
+              </Button>
+              <Button size="sm" variant="ghost" className="text-gray-400 hover:text-white hover:bg-[#2a2a2a]">
                 <Save className="w-4 h-4 mr-2" />
                 Save
               </Button>
-              <Button size="sm" variant="ghost" className="text-gray-400 hover:text-white">
-                <Upload className="w-4 h-4 mr-2" />
-                Import
+              <Button size="sm" variant="ghost" className="text-gray-400 hover:text-white hover:bg-[#2a2a2a]">
+                <Settings className="w-4 h-4 mr-2" />
+                Export
               </Button>
             </div>
           </div>
@@ -524,39 +553,92 @@ const VideoEditor = () => {
                 {/* Media Pool / Bins + Effects - Increased size */}
                 <ResizablePanel defaultSize={22} minSize={18}>
                   <div className="h-full bg-[#1e1e1e] border-r border-gray-700 flex flex-col">
-                    <div className="h-10 bg-[#252525] border-b border-gray-700 flex items-center justify-between px-3">
+                    <div className="h-10 bg-[#252525] border-b border-gray-700 flex items-center justify-between px-2">
                       <div className="flex gap-2">
                         <button
                           onClick={() => setShowEffectsPanel(false)}
-                          className={`text-xs ${!showEffectsPanel ? 'text-white' : 'text-gray-500'} hover:text-white`}
+                          className={`text-xs px-2 py-1 rounded ${!showEffectsPanel ? 'bg-[#3a3a3a] text-white' : 'text-gray-500'} hover:text-white`}
                         >
                           Media
                         </button>
                         <button
                           onClick={() => setShowEffectsPanel(true)}
-                          className={`text-xs ${showEffectsPanel ? 'text-white' : 'text-gray-500'} hover:text-white`}
+                          className={`text-xs px-2 py-1 rounded ${showEffectsPanel ? 'bg-[#3a3a3a] text-white' : 'text-gray-500'} hover:text-white`}
                         >
                           Effects
                         </button>
                       </div>
-                    </div>
-                    <div className="flex-1 overflow-y-auto p-3 space-y-3">
-                      {!showEffectsPanel ? (
-                        // Media Pool - Larger thumbnails
-                        mediaBins.map(item => (
-                          <div
-                            key={item.id}
-                            className="bg-[#2a2a2a] rounded p-3 cursor-grab active:cursor-grabbing hover:bg-[#333] transition-colors border border-gray-700"
-                            draggable
-                            onDragStart={(e) => handleDragStart(e, item)}
+                      {!showEffectsPanel && (
+                        <div className="flex gap-1">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-6 w-6 text-gray-400"
+                            onClick={() => setMediaViewMode(mediaViewMode === 'list' ? 'thumbnails' : 'list')}
+                            title={mediaViewMode === 'list' ? 'Thumbnail view' : 'List view'}
                           >
-                            <div className="aspect-video bg-[#1a1a1a] rounded mb-3 flex items-center justify-center">
-                              <span className="text-gray-500 text-2xl">{item.type === 'video' ? '🎬' : '🎵'}</span>
-                            </div>
-                            <div className="text-sm text-gray-300 truncate font-medium">{item.name}</div>
-                            <div className="text-xs text-gray-500 mt-1">{formatTimecode(item.duration)}</div>
+                            {mediaViewMode === 'list' ? <Grid className="w-3 h-3" /> : <List className="w-3 h-3" />}
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-6 w-6 text-gray-400"
+                            onClick={() => {
+                              const sorts = ['name', 'duration', 'type'];
+                              const currentIndex = sorts.indexOf(mediaSortBy);
+                              setMediaSortBy(sorts[(currentIndex + 1) % sorts.length]);
+                            }}
+                            title={`Sort by: ${mediaSortBy}`}
+                          >
+                            <SortAsc className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 overflow-y-auto p-2">
+                      {!showEffectsPanel ? (
+                        // Media Pool
+                        mediaViewMode === 'list' ? (
+                          // LIST VIEW (Default)
+                          <div className="space-y-1">
+                            {getSortedMediaBins().map(item => (
+                              <div
+                                key={item.id}
+                                className="flex items-center gap-2 p-2 rounded cursor-grab active:cursor-grabbing hover:bg-[#2a2a2a] transition-colors group"
+                                draggable
+                                onDragStart={(e) => handleDragStart(e, item)}
+                              >
+                                {item.type === 'video' ? (
+                                  <FileVideo className="w-4 h-4 text-blue-400 flex-shrink-0" />
+                                ) : (
+                                  <FileAudio className="w-4 h-4 text-green-400 flex-shrink-0" />
+                                )}
+                                <div className="flex-1 min-w-0">
+                                  <div className="text-xs text-gray-300 truncate group-hover:text-white">{item.name}</div>
+                                  <div className="text-[10px] text-gray-500">{formatTimecode(item.duration)}</div>
+                                </div>
+                              </div>
+                            ))}
                           </div>
-                        ))
+                        ) : (
+                          // THUMBNAIL VIEW
+                          <div className="space-y-3">
+                            {getSortedMediaBins().map(item => (
+                              <div
+                                key={item.id}
+                                className="bg-[#2a2a2a] rounded p-3 cursor-grab active:cursor-grabbing hover:bg-[#333] transition-colors border border-gray-700"
+                                draggable
+                                onDragStart={(e) => handleDragStart(e, item)}
+                              >
+                                <div className="aspect-video bg-[#1a1a1a] rounded mb-3 flex items-center justify-center">
+                                  <span className="text-gray-500 text-2xl">{item.type === 'video' ? '🎬' : '🎵'}</span>
+                                </div>
+                                <div className="text-sm text-gray-300 truncate font-medium">{item.name}</div>
+                                <div className="text-xs text-gray-500 mt-1">{formatTimecode(item.duration)}</div>
+                              </div>
+                            ))}
+                          </div>
+                        )
                       ) : (
                         // Effects Panel
                         <>
