@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TESTE URGENTE - Background Preto</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        html {
+            background: #000000 !important;
+        }
+        
+        body {
+            background: #000000 !important;
+            color: #00ff00 !important;
+            font-family: monospace;
+            font-size: 20px;
+            padding: 40px;
+            min-height: 100vh;
+        }
+        
+        h1 {
+            color: #00ff00;
+            font-size: 48px;
+            margin-bottom: 20px;
+            text-shadow: 0 0 10px #00ff00;
+        }
+        
+        .box {
+            background: #111111;
+            border: 2px solid #00ff00;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        
+        code {
+            color: #ffff00;
+            background: #222;
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>✅ TESTE DE FUNDO PRETO</h1>
+    
+    <div class="box">
+        <h2>Se você está vendo fundo PRETO com texto VERDE:</h2>
+        <p>✅ O CSS está funcionando corretamente!</p>
+        <p>✅ O problema é cache do navegador!</p>
+    </div>
+    
+    <div class="box">
+        <h2>Se você está vendo fundo BRANCO:</h2>
+        <p>❌ Há um problema no navegador ou extensões bloqueando CSS</p>
+    </div>
+    
+    <div class="box">
+        <h2>🔧 Solução:</h2>
+        <ol>
+            <li>Pressione <code>Ctrl + Shift + Delete</code></li>
+            <li>Marque "Cached images and files"</li>
+            <li>Clique em "Clear data"</li>
+            <li>Feche TODOS os navegadores</li>
+            <li>Abra novamente e acesse: <code>http://localhost:5173</code></li>
+        </ol>
+    </div>
+    
+    <div class="box">
+        <h2>📝 Informações:</h2>
+        <p>Timestamp: <code id="timestamp"></code></p>
+        <p>User Agent: <code id="userAgent"></code></p>
+    </div>
+    
+    <script>
+        document.getElementById('timestamp').textContent = new Date().toLocaleString();
+        document.getElementById('userAgent').textContent = navigator.userAgent;
+        
+        // Log no console
+        console.log('%c TESTE DE BACKGROUND ', 'background: #000; color: #0f0; font-size: 20px; padding: 10px;');
+        console.log('Se você vê fundo preto = CSS OK');
+        console.log('Se você vê fundo branco = Problema de cache');
+    </script>
+</body>
+</html>

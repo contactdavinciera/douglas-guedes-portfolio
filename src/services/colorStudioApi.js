@@ -1,5 +1,6 @@
 // API service for Color Studio Pro
-const API_BASE_URL = 'https://douglas-guedes-portfolio.onrender.com/api/color-studio';
+// Usar variável de ambiente ou fallback para localhost
+const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5001') + '/api/color-studio';
 
 class ColorStudioAPI {
   async uploadFile(file, projectName, clientEmail) {

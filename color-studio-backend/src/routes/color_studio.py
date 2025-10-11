@@ -28,7 +28,7 @@ MAX_FILE_SIZE = 5 * 1024 * 1024 * 1024  # 5GB
 # ==========================================
 # ENVIRONMENT VARIABLES
 # ==========================================
-CLOUDFLARE_ACCOUNT_ID = os.getenv("CLOUDFLARE_ACCOUNT_ID", "d4582884a8eb6bd3a185a18e3a918026")
+CLOUDFLARE_ACCOUNT_ID = os.getenv("CLOUDFLARE_ACCOUNT_ID")
 CLOUDFLARE_API_TOKEN = os.getenv("CLOUDFLARE_API_TOKEN")
 CLOUDFLARE_STREAM_API_TOKEN = os.getenv("CLOUDFLARE_STREAM_API_TOKEN", CLOUDFLARE_API_TOKEN)
 
@@ -162,13 +162,22 @@ def init_stream_upload():
 
 
 @color_studio_bp.route("/stream-proxy", methods=["POST", "OPTIONS"])
+@cross_origin(origins=["https://douglas-guedes-portfolio.onrender.com", "https://douglas-guedes-portfolio.pages.dev", "http://localhost:3000", "http://localhost:5173", "http://localhost:5174"], methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"], allow_headers=["Content-Type", "Authorization", "X-Requested-With"], supports_credentials=True, max_age=3600)
 def stream_proxy_upload():
     """
     Recebe arquivo COMPLETO e faz upload TUS para Cloudflare Stream em chunks
     Endpoint: POST /api/color-studio/stream-proxy
     """
+    print("🔥🔥🔥 STREAM-PROXY ENDPOINT HIT! 🔥🔥🔥")
+    current_app.logger.error("=== STREAM-PROXY ENDPOINT ENTRY ===")
+    
     if request.method == "OPTIONS":
+        print("✅ OPTIONS REQUEST - Handling preflight")
         return handle_preflight()
+    
+    print("✅ POST REQUEST RECEIVED")
+    current_app.logger.error(f"Request method: {request.method}")
+    current_app.logger.error(f"Request files: {list(request.files.keys())}")
     
     try:
         if "file" not in request.files:
@@ -552,32 +561,51 @@ def convert_raw_file():
         # 2. Baixar o arquivo RAW para o servidor
         temp_raw_path = os.path.join(get_upload_folder(), f"{uuid.uuid4()}.raw")
         current_app.logger.info(f"⬇️ Baixando RAW de R2 para: {temp_raw_path}")
-        response = requests.get(download_url, stream=True)
+        response = requests.get(download_url, stream=True, timeout=300)  # 5 minutos para download grande
         response.raise_for_status() # Levanta exceção para status de erro
         with open(temp_raw_path, "wb") as f:
             for chunk in response.iter_content(chunk_size=8192):
                 f.write(chunk)
         current_app.logger.info(f"✅ Download RAW concluído: {temp_raw_path}")
 
-        # 3. Converter o arquivo usando FFmpeg
+        # 3. Converter o arquivo usando FFmpeg (com cleanup automático)
         output_filename = f"{os.path.splitext(key)[0]}.{output_format}"
         output_path = os.path.join(get_upload_folder(), output_filename)
         
-        # Exemplo de comando FFmpeg para converter para H.265
-        ffmpeg_command = [
-            "ffmpeg",
-            "-i", temp_raw_path,
-            "-c:v", "libx265", # Codec H.265
-            "-crf", "23",      # Qualidade (menor = melhor qualidade, maior arquivo)
-            "-preset", "medium", # Velocidade de codificação
-            "-tag:v", "hvc1", # Tag para compatibilidade com H.265
-            "-c:a", "aac",     # Codec de áudio
-            "-b:a", "128k",    # Bitrate de áudio
-            output_path
-        ]
-        current_app.logger.info(f"▶️ Executando FFmpeg: {" ".join(ffmpeg_command)}")
-        subprocess.run(ffmpeg_command, check=True, capture_output=True)
-        current_app.logger.info(f"✅ Conversão FFmpeg concluída: {output_path}")
+        try:
+            # Exemplo de comando FFmpeg para converter para H.265
+            ffmpeg_command = [
+                "ffmpeg",
+                "-i", os.path.abspath(temp_raw_path),  # Usar absolute path por segurança
+                "-c:v", "libx265", # Codec H.265
+                "-crf", "23",      # Qualidade (menor = melhor qualidade, maior arquivo)
+                "-preset", "medium", # Velocidade de codificação
+                "-tag:v", "hvc1", # Tag para compatibilidade com H.265
+                "-c:a", "aac",     # Codec de áudio
+                "-b:a", "128k",    # Bitrate de áudio
+                os.path.abspath(output_path)
+            ]
+            current_app.logger.info(f"▶️ Executando FFmpeg: {' '.join(ffmpeg_command)}")
+            # ✅ CORRIGIDO: Reduzir timeout de 1h para 30min (1800s)
+            subprocess.run(ffmpeg_command, check=True, capture_output=True, timeout=1800)
+            current_app.logger.info(f"✅ Conversão FFmpeg concluída: {output_path}")
+        except subprocess.TimeoutExpired:
+            current_app.logger.error("❌ FFmpeg timeout - arquivo muito grande ou corrompido")
+            # ✅ ADICIONADO: Limpar output_path em caso de erro
+            if os.path.exists(output_path):
+                os.remove(output_path)
+            raise
+        except Exception as e:
+            current_app.logger.error(f"❌ Erro no FFmpeg: {str(e)}")
+            # ✅ ADICIONADO: Limpar output_path em caso de erro
+            if os.path.exists(output_path):
+                os.remove(output_path)
+            raise
+        finally:
+            # Sempre limpar arquivo RAW temporário
+            if os.path.exists(temp_raw_path):
+                os.remove(temp_raw_path)
+                current_app.logger.info(f"🗑️ Arquivo RAW temporário removido: {temp_raw_path}")
 
         # 4. Fazer upload do arquivo convertido para o Cloudflare Stream
         with open(output_path, "rb") as f_converted:
@@ -620,10 +648,10 @@ def convert_raw_file():
                 offset += len(chunk)
             current_app.logger.info(f"✅ Upload do arquivo convertido para Stream concluído: {uid}")
 
-            # 5. Limpar arquivos temporários
-            os.remove(temp_raw_path)
-            os.remove(output_path)
-            current_app.logger.info(f"🗑️ Arquivos temporários removidos: {temp_raw_path}, {output_path}")
+            # 5. Limpar arquivo convertido temporário
+            if os.path.exists(output_path):
+                os.remove(output_path)
+                current_app.logger.info(f"🗑️ Arquivo convertido temporário removido: {output_path}")
             
             return jsonify({
                 "success": True,

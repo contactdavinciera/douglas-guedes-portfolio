@@ -92,11 +92,15 @@ def create_app():
     # ==========================================
     # MIDDLEWARE CORS DINÂMICO (aceita subdomínios)
     # ==========================================
+    
+    # ✅ ADICIONADO: Whitelist de subdomínios permitidos (segurança)
+    ALLOWED_SUBDOMAINS = ['main', 'staging', 'preview', 'develop']
+    
     @app.after_request
     def after_request(response):
         """
         Middleware CORS que aceita dinamicamente:
-        - Todos os subdomínios do Cloudflare Pages
+        - Subdomínios específicos do Cloudflare Pages (whitelist)
         - Origens base permitidas
         """
         origin = request.headers.get('Origin')
@@ -109,12 +113,20 @@ def create_app():
             if origin in base_origins:
                 allowed = True
             
-            # 2. Verificar subdomínios do Pages (.pages.dev)
+            # 2. ✅ CORRIGIDO: Verificar subdomínios específicos do Pages (mais seguro)
             elif origin.endswith('.douglas-guedes-portfolio.pages.dev'):
-                allowed = True
+                # Extrair subdomínio (ex: https://main.douglas-guedes-portfolio.pages.dev)
+                subdomain = origin.replace('https://', '').replace('http://', '').split('.')[0]
+                if subdomain in ALLOWED_SUBDOMAINS:
+                    allowed = True
+                    if app.debug:
+                        app.logger.info(f"✅ Subdomínio permitido: {subdomain}")
+                else:
+                    if app.debug:
+                        app.logger.warning(f"⚠️ Subdomínio não permitido: {subdomain}")
                 
-            # 3. Verificar domínio principal do Pages
-            elif 'douglas-guedes-portfolio.pages.dev' in origin:
+            # 3. Verificar domínio principal do Pages (sem subdomínio)
+            elif origin in ['https://douglas-guedes-portfolio.pages.dev', 'http://douglas-guedes-portfolio.pages.dev']:
                 allowed = True
             
             # Se permitido, adicionar headers CORS
@@ -146,48 +158,68 @@ def create_app():
     except ImportError as e:
         print(f"⚠️ Warning: Could not import models: {e}")
 
-    # Importar blueprints (com try/except para rotas opcionais)
+    # Importar blueprints
+    # ✅ CORRIGIDO: Usar imports diretos e logar erros como ERROR
     from src.routes.color_studio import color_studio_bp
+    
+    # Blueprints opcionais (com logging apropriado)
+    user_bp = None
+    upload_bp = None
+    pricing_bp = None
+    colorist_bp = None
+    conversion_bp = None
     
     try:
         from src.routes.user import user_bp
-    except ImportError:
-        user_bp = None
-        print("⚠️ Warning: user routes not found")
+        app.logger.info("✅ user_bp loaded")
+    except ImportError as e:
+        app.logger.error(f"❌ ERRO: user routes não encontradas: {e}")
     
     try:
         from src.routes.upload_routes import upload_bp
-    except ImportError:
-        upload_bp = None
-        print("⚠️ Warning: upload_routes not found")
+        app.logger.info("✅ upload_bp loaded")
+    except ImportError as e:
+        app.logger.error(f"❌ ERRO: upload_routes não encontradas: {e}")
     
     try:
         from src.routes.pricing_routes import pricing_bp
-    except ImportError:
-        pricing_bp = None
-        print("⚠️ Warning: pricing_routes not found")
+        app.logger.info("✅ pricing_bp loaded")
+    except ImportError as e:
+        app.logger.error(f"❌ ERRO: pricing_routes não encontradas: {e}")
     
     try:
         from src.routes.colorist_routes import colorist_bp
-    except ImportError:
-        colorist_bp = None
-        print("⚠️ Warning: colorist_routes not found")
+        app.logger.info("✅ colorist_bp loaded")
+    except ImportError as e:
+        app.logger.error(f"❌ ERRO: colorist_routes não encontradas: {e}")
     
     try:
         from src.routes.conversion_routes import conversion_bp
-    except ImportError:
-        conversion_bp = None
-        print("⚠️ Warning: conversion_routes not found")
+        app.logger.info("✅ conversion_bp loaded")
+    except ImportError as e:
+        app.logger.error(f"❌ ERRO: conversion_routes não encontradas: {e}")
 
     # ==========================================
     # REGISTRAR BLUEPRINTS
     # ==========================================
-    app.register_blueprint(user_bp, url_prefix='/api')
+    # ✅ CORRIGIDO: Só registrar blueprints que foram carregados com sucesso
+    if user_bp:
+        app.register_blueprint(user_bp, url_prefix='/api')
+    
+    # Color Studio é obrigatório
     app.register_blueprint(color_studio_bp, url_prefix='/api/color-studio')
-    app.register_blueprint(upload_bp, url_prefix='/api/upload')
-    app.register_blueprint(pricing_bp, url_prefix='/api/pricing')
-    app.register_blueprint(colorist_bp, url_prefix='/api/colorist')
-    app.register_blueprint(conversion_bp, url_prefix='/api/conversion')
+    
+    if upload_bp:
+        app.register_blueprint(upload_bp, url_prefix='/api/upload')
+    
+    if pricing_bp:
+        app.register_blueprint(pricing_bp, url_prefix='/api/pricing')
+    
+    if colorist_bp:
+        app.register_blueprint(colorist_bp, url_prefix='/api/colorist')
+    
+    if conversion_bp:
+        app.register_blueprint(conversion_bp, url_prefix='/api/conversion')
 
     # ==========================================
     # CRIAR TABELAS

@@ -10,7 +10,8 @@ export default function ColorStudioPro() {
   const [error, setError] = useState(null);
   const [showTimeline, setShowTimeline] = useState(false);
 
-  const API_BASE = 'https://douglas-guedes-portfolio.onrender.com';
+  // Usar variável de ambiente ou fallback para localhost
+  const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 
   // Formatos RAW suportados
   const RAW_FORMATS = ['.braw', '.r3d', '.ari', '.mxf', '.dpx', '.exr'];
@@ -87,18 +88,40 @@ export default function ColorStudioPro() {
     setError(null);
 
     try {
-      // 1. Iniciar upload multipart
+      // Detectar se é formato RAW ou vídeo standard
+      const isRaw = fileInfo.isRaw;
+      
+      if (!isRaw) {
+        // Para MP4/MOV: Upload direto para Cloudflare Stream
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        const uploadResponse = await fetch(`${API_BASE}/api/color-studio/stream-proxy`, {
+          method: 'POST',
+          body: formData
+        });
+
+        if (!uploadResponse.ok) throw new Error('Falha no upload para Stream');
+
+        const result = await uploadResponse.json();
+        setVideoId(result.uid);
+        setUploadStatus('complete');
+        setShowTimeline(true);
+        return;
+      }
+
+      // Para RAW: Upload multipart para R2
       const initResponse = await fetch(`${API_BASE}/api/color-studio/upload/raw/init`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          filename: file.name,
-          filesize: file.size,
-          content_type: file.type || 'application/octet-stream'
+          fileName: file.name,
+          fileSize: file.size,
+          contentType: file.type || 'application/octet-stream'
         })
       });
 
-      if (!initResponse.ok) throw new Error('Falha ao iniciar upload');
+      if (!initResponse.ok) throw new Error('Falha ao iniciar upload RAW');
 
       const { upload_id, key } = await initResponse.json();
 
@@ -118,8 +141,8 @@ export default function ColorStudioPro() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             key,
-            upload_id,
-            part_number: i + 1
+            uploadId: upload_id,
+            partNumber: i + 1
           })
         });
 
@@ -150,7 +173,7 @@ export default function ColorStudioPro() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           key,
-          upload_id,
+          uploadId: upload_id,
           parts: uploadedParts
         })
       });

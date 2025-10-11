@@ -5,13 +5,77 @@
 
 import { API_ENDPOINTS, apiRequest } from '../config/api';
 
+// ✅ ADICIONADO: Constantes de validação
+const MAX_FILE_SIZE = 5 * 1024 * 1024 * 1024; // 5GB
+const ALLOWED_VIDEO_EXTENSIONS = ['.mp4', '.mov', '.avi', '.mkv', '.webm', '.m4v'];
+const ALLOWED_RAW_EXTENSIONS = ['.braw', '.r3d', '.arri', '.ari', '.mxf', '.dng', '.dpx', '.cin'];
+const ALLOWED_EXTENSIONS = [...ALLOWED_VIDEO_EXTENSIONS, ...ALLOWED_RAW_EXTENSIONS];
+
 /**
  * Verifica se o arquivo é formato RAW
  */
 export const isRawFormat = (filename) => {
-  const rawExtensions = ['.braw', '.r3d', '.arri', '.ari', '.mxf', '.dng', '.dpx', '.cin'];
   const extension = filename.toLowerCase().substring(filename.lastIndexOf('.'));
-  return rawExtensions.includes(extension);
+  return ALLOWED_RAW_EXTENSIONS.includes(extension);
+};
+
+/**
+ * ✅ ADICIONADO: Valida arquivo antes do upload
+ */
+export const validateFile = (file) => {
+  const errors = [];
+  
+  // Validar se o arquivo existe
+  if (!file) {
+    errors.push('Nenhum arquivo foi selecionado');
+    return { valid: false, errors };
+  }
+  
+  // Validar tamanho
+  if (file.size === 0) {
+    errors.push('O arquivo está vazio');
+  }
+  
+  if (file.size > MAX_FILE_SIZE) {
+    const maxSizeGB = (MAX_FILE_SIZE / (1024 ** 3)).toFixed(2);
+    const fileSizeGB = (file.size / (1024 ** 3)).toFixed(2);
+    errors.push(`Arquivo muito grande (${fileSizeGB}GB). Tamanho máximo: ${maxSizeGB}GB`);
+  }
+  
+  // Validar extensão
+  const extension = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
+  if (!ALLOWED_EXTENSIONS.includes(extension)) {
+    errors.push(`Formato não suportado: ${extension}. Formatos permitidos: ${ALLOWED_EXTENSIONS.join(', ')}`);
+  }
+  
+  // Validar nome do arquivo
+  if (file.name.length > 255) {
+    errors.push('Nome do arquivo muito longo (máximo 255 caracteres)');
+  }
+  
+  return {
+    valid: errors.length === 0,
+    errors,
+    info: {
+      name: file.name,
+      size: file.size,
+      sizeFormatted: formatFileSize(file.size),
+      extension,
+      isRaw: isRawFormat(file.name),
+      type: file.type
+    }
+  };
+};
+
+/**
+ * ✅ ADICIONADO: Formata tamanho de arquivo
+ */
+export const formatFileSize = (bytes) => {
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
 };
 
 /**
@@ -138,6 +202,16 @@ export const uploadFile = async (file, onProgress) => {
   try {
     console.log('🎬 Starting upload for:', file.name);
     
+    // ✅ ADICIONADO: Validar arquivo antes de enviar
+    const validation = validateFile(file);
+    if (!validation.valid) {
+      const errorMessage = validation.errors.join('; ');
+      console.error('❌ Validação falhou:', validation.errors);
+      throw new Error(`Validação do arquivo falhou: ${errorMessage}`);
+    }
+    
+    console.log('✅ Arquivo validado:', validation.info);
+    
     // Verificar se é RAW ou Standard
     const isRaw = isRawFormat(file.name);
     
@@ -173,11 +247,16 @@ export const uploadFile = async (file, onProgress) => {
   }
 };
 
+// ✅ ADICIONADO: Exportar novas funções de validação
 export default {
   isRawFormat,
+  validateFile,
+  formatFileSize,
   initStreamUpload,
   uploadToStream,
   initRawUpload,
   checkVideoStatus,
   uploadFile,
+  MAX_FILE_SIZE,
+  ALLOWED_EXTENSIONS,
 };

@@ -1,6 +1,8 @@
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api';
+// ✅ CORRIGIDO: Usar mesma variável de ambiente que outros serviços
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+const API_BASE_URL = `${API_URL}/api`;
 
 const r2Api = axios.create({
   baseURL: API_BASE_URL,

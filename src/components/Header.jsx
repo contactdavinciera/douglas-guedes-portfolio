@@ -21,6 +21,7 @@ const Header = () => {
     { name: 'Sobre', href: '/about' },
     { name: 'Serviços', href: '/services' },
     { name: 'Color Studio', href: '/color-studio' },
+    { name: 'Pro Studio', href: '/pro-studio' },
     { name: 'Contato', href: '/contact' }
   ]
 
@@ -28,7 +29,7 @@ const Header = () => {
 
   return (
     <header 
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+      className={`fixed top-0 left-0 right-0 z-[9999] transition-all duration-300 ${
         scrolled 
           ? 'bg-black/95 backdrop-blur-xl border-b border-white/20 shadow-2xl' 
           : 'bg-black/80 backdrop-blur-md border-b border-white/10'
@@ -60,7 +61,7 @@ const Header = () => {
           </a>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center space-x-1">
+          <nav className="flex items-center space-x-1">
             {navigation.map((item) => (
               <a
                 key={item.name}
@@ -68,27 +69,20 @@ const Header = () => {
                 onClick={() => {
                   setActiveSection(item.href)
                 }}
-                className={`relative px-4 py-2 text-sm font-medium transition-all duration-300 rounded-lg group ${
+                className={`relative px-4 py-2 text-sm font-medium transition-all duration-300 rounded-lg group z-10 ${
                   isActive(item.href)
-                    ? 'text-white'
-                    : 'text-gray-400 hover:text-white'
+                    ? 'text-white bg-white/10'
+                    : 'text-gray-300 hover:text-white hover:bg-white/5'
                 }`}
               >
-                {item.name}
+                <span className="relative z-20">{item.name}</span>
                 
                 {/* Active indicator */}
                 <span 
-                  className={`absolute bottom-0 left-1/2 -translate-x-1/2 h-0.5 bg-gradient-to-r from-blue-500 to-purple-500 transition-all duration-300 ${
+                  className={`absolute bottom-0 left-1/2 -translate-x-1/2 h-0.5 bg-gradient-to-r from-blue-500 to-purple-500 transition-all duration-300 z-10 ${
                     isActive(item.href) ? 'w-8' : 'w-0 group-hover:w-6'
                   }`}
                 />
-                
-                {/* Hover background */}
-                <span className={`absolute inset-0 rounded-lg transition-all duration-300 ${
-                  isActive(item.href) 
-                    ? 'bg-white/10' 
-                    : 'bg-white/0 group-hover:bg-white/5'
-                }`} />
               </a>
             ))}
           </nav>

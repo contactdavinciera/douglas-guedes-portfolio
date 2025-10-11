@@ -6,7 +6,8 @@
  */
 class StreamApiService {
   constructor() {
-    this.baseUrl = "https://color-studio-backend.onrender.com";
+    // ✅ CORRIGIDO: Usar variável de ambiente consistente
+    this.baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001';
     this.frontendOrigin = "douglas-guedes-portfolio.pages.dev";
     this.maxRetries = 3;
     this.retryDelay = 1000; // 1 segundo
@@ -72,7 +73,7 @@ async uploadLargeFile(file, onProgress) {
         reject(new Error("Upload aborted"));
       };
 
-      xhr.onerror = () => reject(new Error("Network error"));
+      // ✅ CORRIGIDO: Removido xhr.onerror duplicado
 
       xhr.open("POST", `${this.baseUrl}/api/color-studio/stream-proxy`);
       xhr.send(formData);

@@ -3,10 +3,39 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Só inicializa o Supabase se as variáveis estiverem configuradas
+export const supabase = (supabaseUrl && supabaseAnonKey) 
+  ? createClient(supabaseUrl, supabaseAnonKey)
+  : null;
+
+// Helper para verificar se o Supabase está disponível
+const checkSupabaseAvailable = () => {
+  if (!supabase) {
+    console.warn('Supabase not configured. Timeline features disabled.');
+    throw new Error('Supabase credentials not configured');
+  }
+};
 
 export const projectApi = {
   async create(projectData) {
+    // Se Supabase não estiver configurado, usa localStorage
+    if (!supabase) {
+      const projects = JSON.parse(localStorage.getItem('projects') || '[]');
+      const newProject = {
+        id: Date.now().toString(),
+        name: projectData.name,
+        format: projectData.format,
+        client_id: projectData.client_id,
+        colorist_id: projectData.colorist_id,
+        status: 'draft',
+        created_at: new Date().toISOString()
+      };
+      projects.push(newProject);
+      localStorage.setItem('projects', JSON.stringify(projects));
+      return newProject;
+    }
+    
+    checkSupabaseAvailable();
     const { data, error } = await supabase
       .from('projects')
       .insert([{
@@ -24,6 +53,13 @@ export const projectApi = {
   },
 
   async getById(projectId) {
+    // Se Supabase não estiver configurado, usa localStorage
+    if (!supabase) {
+      const projects = JSON.parse(localStorage.getItem('projects') || '[]');
+      return projects.find(p => p.id === projectId) || null;
+    }
+    
+    checkSupabaseAvailable();
     const { data, error } = await supabase
       .from('projects')
       .select('*')
@@ -35,6 +71,7 @@ export const projectApi = {
   },
 
   async update(projectId, updates) {
+    checkSupabaseAvailable();
     const { data, error } = await supabase
       .from('projects')
       .update({
@@ -50,6 +87,15 @@ export const projectApi = {
   },
 
   async list(userId) {
+    // Se Supabase não estiver configurado, usa localStorage
+    if (!supabase) {
+      const projects = JSON.parse(localStorage.getItem('projects') || '[]');
+      return projects
+        .filter(p => p.client_id === userId || p.colorist_id === userId)
+        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    }
+    
+    checkSupabaseAvailable();
     const { data, error } = await supabase
       .from('projects')
       .select('*')
@@ -63,6 +109,19 @@ export const projectApi = {
 
 export const takeApi = {
   async create(takeData) {
+    // Se Supabase não estiver configurado, usa localStorage
+    if (!supabase) {
+      const takes = JSON.parse(localStorage.getItem('takes') || '[]');
+      const newTake = {
+        id: Date.now().toString(),
+        ...takeData,
+        created_at: new Date().toISOString()
+      };
+      takes.push(newTake);
+      localStorage.setItem('takes', JSON.stringify(takes));
+      return newTake;
+    }
+    
     const { data, error } = await supabase
       .from('timeline_takes')
       .insert([takeData])
@@ -74,6 +133,14 @@ export const takeApi = {
   },
 
   async listByProject(projectId) {
+    // Se Supabase não estiver configurado, usa localStorage
+    if (!supabase) {
+      const takes = JSON.parse(localStorage.getItem('takes') || '[]');
+      return takes
+        .filter(t => t.project_id === projectId)
+        .sort((a, b) => a.order_index - b.order_index);
+    }
+    
     const { data, error } = await supabase
       .from('timeline_takes')
       .select('*')
@@ -191,6 +258,15 @@ export const lutApi = {
   },
 
   async listLibrary() {
+    // Se Supabase não estiver configurado, retorna LUTs de exemplo
+    if (!supabase) {
+      return [
+        { id: '1', name: 'Cinematic Warm', category: 'Film Emulation', file_url: '/luts/cinematic-warm.cube' },
+        { id: '2', name: 'Cool Blue', category: 'Creative', file_url: '/luts/cool-blue.cube' },
+        { id: '3', name: 'Vintage Film', category: 'Film Emulation', file_url: '/luts/vintage.cube' }
+      ];
+    }
+    
     const { data, error } = await supabase
       .from('lut_library')
       .select('*')

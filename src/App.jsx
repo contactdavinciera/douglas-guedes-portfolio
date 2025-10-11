@@ -11,31 +11,40 @@ import ClientDashboard from './pages/ClientDashboard'
 import ColoristDashboardPage from './pages/ColoristDashboard'
 import BatchPricingCalculatorPage from './pages/BatchPricingCalculatorPage'
 import ProColorGradingStudio from './pages/ProColorGradingStudio'
-import './App.css'
+// import './App.css' // ⚠️ Desabilitado - usando apenas index.css para evitar conflitos
 
-console.log('App.jsx loaded - Version 2.2'); // Para verificar o deploy
+console.log('App.jsx loaded - Version 2.4 - Fixed CSS Loading'); // Para verificar o deploy
 
 function App() {
   return (
-
-      <div className="min-h-screen bg-black text-white">
-        <Header />
-        <main>
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/portfolio" element={<Portfolio />} />
-            <Route path="/about" element={<About />} />
-            <Route path="/services" element={<Services />} />
-            <Route path="/contact" element={<Contact />} />
-            <Route path="/color-studio" element={<ColorStudio />} />
-            <Route path="/color-studio/:mediaFileId" element={<ColorStudio />} />
-            <Route path="/dashboard" element={<ClientDashboard />} />
-            <Route path="/pro-studio" element={<ProColorGradingStudio />} />
-          </Routes>
-        </main>
-        <Footer />
-      </div>
-
+    <Routes>
+      {/* Pro Studio - Fullscreen (sem Header/Footer) */}
+      <Route path="/pro-studio" element={<ProColorGradingStudio />} />
+      
+      {/* Rotas normais do site (com Header/Footer) */}
+      <Route path="*" element={
+        <div style={{ 
+          minHeight: '100vh', 
+          backgroundColor: '#000000',
+          color: '#ffffff'
+        }}>
+          <Header />
+          <main>
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/portfolio" element={<Portfolio />} />
+              <Route path="/about" element={<About />} />
+              <Route path="/services" element={<Services />} />
+              <Route path="/contact" element={<Contact />} />
+              <Route path="/color-studio" element={<ColorStudio />} />
+              <Route path="/color-studio/:mediaFileId" element={<ColorStudio />} />
+              <Route path="/dashboard" element={<ClientDashboard />} />
+            </Routes>
+          </main>
+          <Footer />
+        </div>
+      } />
+    </Routes>
   )
 }
 

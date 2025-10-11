@@ -1,14 +1,66 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" style="background: #000 !important;">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
     <title>Douglas Guedes - Color Grading for Premium Content</title>
+    
+    <style>
+      /* 🔥 FORÇAR PRETO - VERSÃO ULTRA AGRESSIVA */
+      * {
+        margin: 0;
+        padding: 0;
+      }
+      
+      html {
+        background: #000 !important;
+        background-color: #000 !important;
+      }
+      
+      body {
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #000 !important;
+        background-color: #000 !important;
+        color: #fff !important;
+      }
+      
+      #root {
+        background: #000 !important;
+        background-color: #000 !important;
+        min-height: 100vh !important;
+      }
+      
+      /* Override qualquer classe que tente mudar */
+      .bg-white,
+      [class*="bg-white"],
+      [class*="bg-gray-50"],
+      [class*="bg-gray-100"] {
+        background-color: #000 !important;
+      }
+    </style>
   </head>
-  <body>
-    <div id="root"></div>
+  <body style="background: #000 !important;">
+    <div id="root" style="background: #000 !important;"></div>
     <script type="module" src="/src/main.jsx"></script>
+    
+    <!-- Debug script -->
+    <script>
+      console.log('%c🎨 CHECKING BACKGROUND COLOR ', 'background: #000; color: #0f0; font-size: 20px; padding: 10px;');
+      setTimeout(() => {
+        const body = window.getComputedStyle(document.body);
+        const root = window.getComputedStyle(document.getElementById('root'));
+        console.log('Body background:', body.backgroundColor);
+        console.log('Root background:', root.backgroundColor);
+        
+        if (body.backgroundColor !== 'rgb(0, 0, 0)') {
+          console.error('❌ BODY NÃO ESTÁ PRETO! Cor atual:', body.backgroundColor);
+        } else {
+          console.log('✅ Body está preto');
+        }
+      }, 1000);
+    </script>
   </body>
 </html>

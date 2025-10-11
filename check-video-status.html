@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Check Cloudflare Stream Video Status</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            max-width: 900px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #0a0a0a;
+            color: #00ff00;
+        }
+        h1 { color: #00ff00; }
+        .status { 
+            background: #1a1a1a; 
+            padding: 20px; 
+            border: 1px solid #00ff00;
+            border-radius: 5px;
+            margin: 20px 0;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        button {
+            background: #00ff00;
+            color: #000;
+            border: none;
+            padding: 15px 30px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:hover { background: #00cc00; }
+        .ready { color: #00ff00; }
+        .error { color: #ff0000; }
+        .processing { color: #ffaa00; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Check Video Status</h1>
+    <p>Video ID: <strong>231c415fc71ac9ecd3f45755308aa5c3</strong></p>
+    
+    <button onclick="checkStatus()">🔍 Check Status</button>
+    
+    <div id="result" class="status"></div>
+
+    <script>
+        const API_URL = 'http://localhost:5001';
+        const VIDEO_ID = '231c415fc71ac9ecd3f45755308aa5c3';
+        
+        async function checkStatus() {
+            document.getElementById('result').innerHTML = '⏳ Checking video status...';
+            
+            try {
+                const response = await fetch(`${API_URL}/api/color-studio/video-status?videoId=${VIDEO_ID}`);
+                const data = await response.json();
+                
+                console.log('📊 Video status:', data);
+                
+                if (data.cf && data.cf.result) {
+                    const video = data.cf.result;
+                    const status = video.status?.state || 'unknown';
+                    
+                    let statusClass = 'processing';
+                    let statusEmoji = '⏳';
+                    
+                    if (status === 'ready') {
+                        statusClass = 'ready';
+                        statusEmoji = '✅';
+                    } else if (status === 'error') {
+                        statusClass = 'error';
+                        statusEmoji = '❌';
+                    }
+                    
+                    document.getElementById('result').innerHTML = `
+${statusEmoji} Status: <span class="${statusClass}">${status.toUpperCase()}</span>
+
+📹 Video Details:
+- UID: ${video.uid}
+- Duration: ${video.duration || 'N/A'}s
+- Size: ${video.size ? (video.size / 1024 / 1024).toFixed(2) + ' MB' : 'N/A'}
+- Created: ${video.created ? new Date(video.created).toLocaleString() : 'N/A'}
+- Ready to Stream: ${video.readyToStream ? 'YES ✅' : 'NO ❌'}
+- Processing: ${video.status?.pctComplete || 0}%
+
+🎬 Playback URLs:
+${video.playback?.hls ? '- HLS: ' + video.playback.hls : '❌ No HLS URL'}
+${video.playback?.dash ? '- DASH: ' + video.playback.dash : '❌ No DASH URL'}
+
+📝 Full Response:
+${JSON.stringify(data, null, 2)}
+                    `;
+                    
+                    if (status !== 'ready') {
+                        document.getElementById('result').innerHTML += `
+
+⚠️ Video is still processing! Wait a few seconds and check again.`;
+                    }
+                } else {
+                    document.getElementById('result').innerHTML = `
+❌ Error: Could not fetch video status
+
+Response:
+${JSON.stringify(data, null, 2)}
+                    `;
+                }
+                
+            } catch (error) {
+                console.error('❌ Error:', error);
+                document.getElementById('result').innerHTML = `
+❌ Error checking status:
+${error.message}
+
+Make sure the backend is running on ${API_URL}
+                `;
+            }
+        }
+        
+        // Auto-check on load
+        window.onload = () => {
+            setTimeout(checkStatus, 500);
+        };
+    </script>
+</body>
+</html>

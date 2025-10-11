@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Upload to Cloudflare Stream</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: white;
+        }
+        .upload-box {
+            border: 2px dashed #4A90E2;
+            padding: 40px;
+            text-align: center;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        button {
+            background: #4A90E2;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #357ABD;
+        }
+        .result {
+            background: #2a2a2a;
+            padding: 20px;
+            border-radius: 5px;
+            margin-top: 20px;
+            word-break: break-all;
+        }
+        .success {
+            color: #4CAF50;
+        }
+        .error {
+            color: #f44336;
+        }
+        input[type="file"] {
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎬 Test Upload to Cloudflare Stream</h1>
+    <p>Use este arquivo para fazer upload de um vídeo MP4 para o Cloudflare Stream</p>
+    
+    <div class="upload-box">
+        <input type="file" id="fileInput" accept="video/*">
+        <button onclick="uploadVideo()">📤 Upload Video</button>
+    </div>
+    
+    <div id="progress" style="display:none;">
+        <p>Uploading: <span id="progressPercent">0</span>%</p>
+        <progress id="progressBar" value="0" max="100" style="width: 100%;"></progress>
+    </div>
+    
+    <div id="result" class="result" style="display:none;"></div>
+
+    <script>
+        const API_URL = 'http://localhost:5001';
+        
+        async function uploadVideo() {
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                alert('Selecione um arquivo primeiro!');
+                return;
+            }
+            
+            console.log('📤 Uploading file:', file.name, file.size, 'bytes');
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            document.getElementById('progress').style.display = 'block';
+            document.getElementById('result').style.display = 'none';
+            
+            try {
+                const response = await fetch(`${API_URL}/api/color-studio/stream-proxy`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                console.log('✅ Upload response:', data);
+                
+                if (data.success) {
+                    document.getElementById('result').innerHTML = `
+                        <p class="success">✅ Upload Successful!</p>
+                        <p><strong>Video ID (UID):</strong></p>
+                        <p style="font-size: 20px; color: #4CAF50; font-weight: bold;">${data.uid}</p>
+                        <p><strong>Playback URL:</strong></p>
+                        <p>${data.playbackUrl || 'N/A'}</p>
+                        <hr>
+                        <p style="font-size: 14px; color: #888;">
+                            Copie o <strong>Video ID</strong> acima e use no código:<br>
+                            <code style="background: #333; padding: 5px; display: inline-block; margin-top: 5px;">
+                                const mockVideoId = '${data.uid}';
+                            </code>
+                        </p>
+                    `;
+                    document.getElementById('result').style.display = 'block';
+                } else {
+                    throw new Error(data.error || 'Upload failed');
+                }
+                
+            } catch (error) {
+                console.error('❌ Upload error:', error);
+                document.getElementById('result').innerHTML = `
+                    <p class="error">❌ Upload Failed</p>
+                    <p>${error.message}</p>
+                `;
+                document.getElementById('result').style.display = 'block';
+            } finally {
+                document.getElementById('progress').style.display = 'none';
+            }
+        }
+        
+        // Monitor upload progress
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                console.log('📁 File selected:', file.name, (file.size / 1024 / 1024).toFixed(2), 'MB');
+            }
+        });
+    </script>
+</body>
+</html>

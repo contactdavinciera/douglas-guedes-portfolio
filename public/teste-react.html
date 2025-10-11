@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en" style="background: #000;">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste React Preto</title>
+</head>
+<body style="background: #000; color: #0f0; margin: 0; padding: 40px; font-family: monospace; font-size: 20px;">
+    <h1 style="color: #0f0; font-size: 48px;">✅ TESTE REACT BÁSICO</h1>
+    
+    <div style="background: #111; border: 2px solid #0f0; padding: 20px; margin: 20px 0; border-radius: 8px;">
+        <h2 style="color: #0f0;">Se você está vendo isto PRETO:</h2>
+        <p>✅ HTML básico funciona</p>
+        <p>✅ O problema está no React/Tailwind</p>
+    </div>
+    
+    <div style="background: #111; border: 2px solid #0f0; padding: 20px; margin: 20px 0; border-radius: 8px;">
+        <h2 style="color: #0f0;">Vou carregar o React App agora...</h2>
+        <p id="status">⏳ Aguarde...</p>
+    </div>
+    
+    <div id="root"></div>
+    
+    <script type="module" src="/src/main.jsx"></script>
+    
+    <script>
+        setTimeout(() => {
+            const root = document.getElementById('root');
+            if (root && root.children.length > 0) {
+                document.getElementById('status').innerHTML = '✅ React carregado! Verificando cor...';
+                
+                setTimeout(() => {
+                    const computedBody = window.getComputedStyle(document.body);
+                    const bgColor = computedBody.backgroundColor;
+                    console.log('Background color:', bgColor);
+                    
+                    if (bgColor === 'rgb(0, 0, 0)' || bgColor === 'black') {
+                        document.getElementById('status').innerHTML = '✅ React carregou E manteve preto!';
+                    } else {
+                        document.getElementById('status').innerHTML = '❌ React sobrescreveu para: ' + bgColor;
+                        document.getElementById('status').style.color = '#f00';
+                    }
+                }, 500);
+            } else {
+                document.getElementById('status').innerHTML = '❌ React não carregou!';
+                document.getElementById('status').style.color = '#f00';
+            }
+        }, 2000);
+    </script>
+</body>
+</html>
