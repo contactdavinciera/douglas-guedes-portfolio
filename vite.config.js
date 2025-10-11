@@ -4,9 +4,21 @@ import tailwindcss from '@tailwindcss/vite'
 import path from 'path'
 
 export default defineConfig({
-  base: '/',              // <- importante!
+  base: '/',
   server: {
-    watch: { usePolling: true },
+    port: 5173,
+    strictPort: true,
+    host: true,
+    watch: {
+      usePolling: true,
+      interval: 100,
+    },
+    hmr: {
+      overlay: true,
+      timeout: 10000,
+    },
+    // Keep connections alive
+    cors: true,
   },
   plugins: [react(), tailwindcss()],
   optimizeDeps: {

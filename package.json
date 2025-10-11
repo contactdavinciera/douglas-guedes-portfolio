@@ -5,9 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:stable": "vite --host --strictPort",
+    "dev:debug": "vite --debug --force",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "maestro": "powershell -ExecutionPolicy Bypass -File ./start-maestro-dedicated.ps1"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.0.1",
