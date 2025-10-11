@@ -181,27 +181,78 @@ export const razorCut = (currentTime, clips, setClips, selectedClipIds = null) =
   setClips(newClips);
 };
 
-// Jump to Next/Previous Clip (Arrow Up/Down)
+// Jump to Next/Previous Edit Point (Arrow Up/Down)
+// PROFESSIONAL: Snaps to exact edit points (start/end of clips)
 export const jumpToClip = (direction, currentTime, clips, setCurrentTime, setSelectedClip) => {
-  const sortedClips = [...clips].sort((a, b) => a.startTime - b.startTime);
+  // Get ALL edit points (start and end of each clip)
+  const editPoints = [];
+  
+  clips.forEach(clip => {
+    editPoints.push({
+      time: clip.startTime,
+      type: 'start',
+      clipId: clip.id,
+      clipName: clip.id
+    });
+    editPoints.push({
+      time: clip.startTime + clip.duration,
+      type: 'end',
+      clipId: clip.id,
+      clipName: clip.id
+    });
+  });
+
+  // Remove duplicates and sort
+  const uniquePoints = Array.from(
+    new Set(editPoints.map(p => p.time))
+  ).sort((a, b) => a - b);
+
+  // Add timeline start if not present
+  if (!uniquePoints.includes(0)) {
+    uniquePoints.unshift(0);
+  }
+
+  const THRESHOLD = 0.01; // 10ms threshold for "same position"
 
   if (direction === 'next') {
-    const nextClip = sortedClips.find(c => c.startTime > currentTime);
-    if (nextClip) {
-      setCurrentTime(nextClip.startTime);
-      setSelectedClip(nextClip.id);
-      console.log(`⬇️ Jumped to next clip: ${nextClip.id}`);
+    // Find next edit point AFTER current time (with threshold)
+    const nextPoint = uniquePoints.find(time => time > currentTime + THRESHOLD);
+    
+    if (nextPoint !== undefined) {
+      setCurrentTime(nextPoint);
+      
+      // Select clip that starts at this point
+      const clipAtPoint = clips.find(c => Math.abs(c.startTime - nextPoint) < THRESHOLD);
+      if (clipAtPoint) {
+        setSelectedClip(clipAtPoint.id);
+        console.log(`⬇️ Jumped to NEXT edit: ${nextPoint.toFixed(2)}s (${clipAtPoint.id})`);
+      } else {
+        console.log(`⬇️ Jumped to NEXT edit: ${nextPoint.toFixed(2)}s (end of clip)`);
+      }
+    } else {
+      console.log(`⬇️ Already at last edit point`);
     }
   } else if (direction === 'prev') {
-    const prevClips = sortedClips.filter(c => c.startTime < currentTime);
-    const prevClip = prevClips[prevClips.length - 1];
-    if (prevClip) {
-      setCurrentTime(prevClip.startTime);
-      setSelectedClip(prevClip.id);
-      console.log(`⬆️ Jumped to previous clip: ${prevClip.id}`);
+    // Find previous edit point BEFORE current time (with threshold)
+    const prevPoints = uniquePoints.filter(time => time < currentTime - THRESHOLD);
+    const prevPoint = prevPoints[prevPoints.length - 1];
+    
+    if (prevPoint !== undefined) {
+      setCurrentTime(prevPoint);
+      
+      // Select clip that starts at this point
+      const clipAtPoint = clips.find(c => Math.abs(c.startTime - prevPoint) < THRESHOLD);
+      if (clipAtPoint) {
+        setSelectedClip(clipAtPoint.id);
+        console.log(`⬆️ Jumped to PREV edit: ${prevPoint.toFixed(2)}s (${clipAtPoint.id})`);
+      } else {
+        console.log(`⬆️ Jumped to PREV edit: ${prevPoint.toFixed(2)}s`);
+      }
     } else {
+      // Go to start
       setCurrentTime(0);
-      console.log(`⬆️ Jumped to timeline start`);
+      setSelectedClip(null);
+      console.log(`⬆️ Jumped to timeline START (00:00:00:00)`);
     }
   }
 };

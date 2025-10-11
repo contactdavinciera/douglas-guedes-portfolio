@@ -414,6 +414,29 @@
   border-color: #6d28d9;
 }
 
+/* Edit Points Indicators */
+.maestro-edit-point {
+  position: absolute;
+  top: 0;
+  width: 2px;
+  height: 100%;
+  background: rgba(255, 215, 0, 0.3);
+  pointer-events: none;
+  z-index: 5;
+}
+
+.maestro-edit-point::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -3px;
+  width: 8px;
+  height: 8px;
+  background: #FFD700;
+  border-radius: 50%;
+  box-shadow: 0 0 8px rgba(255, 215, 0, 0.6);
+}
+
 /* IN/OUT Points Markers */
 .maestro-in-out-range {
   position: absolute;

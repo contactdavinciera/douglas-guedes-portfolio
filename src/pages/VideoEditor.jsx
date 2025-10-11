@@ -98,6 +98,7 @@ const VideoEditor = () => {
   const [nestedSequences, setNestedSequences] = useState([]);
   const [showEffectsPanel, setShowEffectsPanel] = useState(false);
   const [mediaViewMode, setMediaViewMode] = useState('list'); // 'list' or 'thumbnails'
+  const [jumpFeedback, setJumpFeedback] = useState(null); // Visual feedback for navigation
   const [mediaSortBy, setMediaSortBy] = useState('name'); // 'name', 'duration', 'type'
   const [uploadProgress, setUploadProgress] = useState(null); // { filename, progress }
   const [transcodeJobs, setTranscodeJobs] = useState([]); // Active transcode jobs
@@ -740,33 +741,43 @@ const VideoEditor = () => {
           setIsPlaying(false);
           setPlaybackSpeed(1);
           break;
-        case 'arrowup': // Arrow Up - Jump to previous clip start
+        case 'arrowup': // Arrow Up - Jump to PREVIOUS edit point
           e.preventDefault();
           EditingFunctions.jumpToClip(
             'prev',
             currentTime,
             timelineClips,
-            setCurrentTime,
+            (time) => {
+              setCurrentTime(time);
+              // Show visual feedback
+              setJumpFeedback('⬆️ PREV EDIT');
+              setTimeout(() => setJumpFeedback(null), 800);
+            },
             setSelectedClip
           );
           break;
-        case 'arrowdown': // Arrow Down - Jump to next clip start
+        case 'arrowdown': // Arrow Down - Jump to NEXT edit point
           e.preventDefault();
           EditingFunctions.jumpToClip(
             'next',
             currentTime,
             timelineClips,
-            setCurrentTime,
+            (time) => {
+              setCurrentTime(time);
+              // Show visual feedback
+              setJumpFeedback('⬇️ NEXT EDIT');
+              setTimeout(() => setJumpFeedback(null), 800);
+            },
             setSelectedClip
           );
           break;
-        case 'arrowleft': // Arrow Left - Previous frame
+        case 'arrowleft': // Arrow Left - Previous frame (project FPS)
           e.preventDefault();
-          setCurrentTime(prev => Math.max(0, prev - (1/24)));
+          setCurrentTime(prev => Math.max(0, prev - (1 / projectSettings.framerate)));
           break;
-        case 'arrowright': // Arrow Right - Next frame
+        case 'arrowright': // Arrow Right - Next frame (project FPS)
           e.preventDefault();
-          setCurrentTime(prev => Math.min(duration, prev + (1/24)));
+          setCurrentTime(prev => Math.min(duration, prev + (1 / projectSettings.framerate)));
           break;
         case 'l': // L - Forward play
           e.preventDefault();
@@ -933,6 +944,15 @@ const VideoEditor = () => {
         thumbnailURL={scrubber.thumbnail}
         formatTimecode={formatTimecode}
       />
+
+      {/* Jump Navigation Feedback */}
+      {jumpFeedback && (
+        <div className="fixed top-24 left-1/2 transform -translate-x-1/2 z-[99999]">
+          <div className="bg-blue-600 text-white px-6 py-3 rounded-lg shadow-2xl font-bold text-sm animate-bounce">
+            {jumpFeedback}
+          </div>
+        </div>
+      )}
       
       {/* Main Editor Container - Below header - SOFTWARE MODE */}
       <div className="maestro-software-mode w-full max-w-[98vw] h-[calc(100vh-7rem)] mx-auto bg-[#262626] rounded-lg overflow-hidden shadow-2xl flex flex-col">
