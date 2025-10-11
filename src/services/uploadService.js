@@ -1,71 +1,65 @@
 /**
  * Serviço de Upload para Color Studio
- * Gerencia uploads para Cloudflare Stream e R2
+ * FLUXO CORRETO: Stream direto OU RAW → R2 → H.265 → Stream
  */
 
-import { API_ENDPOINTS, apiRequest } from '../config/api';
+import { API_ENDPOINTS, apiRequest } from "../config/api";
 
 /**
  * Verifica se o arquivo é formato RAW
  */
 export const isRawFormat = (filename) => {
-  const rawExtensions = ['.braw', '.r3d', '.arri', '.ari', '.mxf', '.dng', '.dpx', '.cin'];
-  const extension = filename.toLowerCase().substring(filename.lastIndexOf('.'));
-  return rawExtensions.includes(extension);
+  const rawExtensions = [".braw", ".r3d", ".arri", ".ari", ".mxf", ".dng", ".dpx", ".cin"];
+  const ext = filename.toLowerCase().substring(filename.lastIndexOf("."));
+  return rawExtensions.includes(ext);
 };
 
 /**
- * Inicializa upload para Cloudflare Stream (vídeos standard)
+ * FLUXO 1: Upload para Cloudflare Stream (vídeos standard)
  */
-export const initStreamUpload = async (file) => {
+export const uploadToStream = async (file, onProgress) => {
   try {
-    console.log('📤 Initializing Stream upload:', file.name);
+    console.log("📹 FLUXO STREAM: Iniciando upload standard...");
+    console.log("   Arquivo:", file.name);
+    console.log("   Tamanho:", (file.size / 1024 / 1024).toFixed(2), "MB");
     
-    const response = await apiRequest(API_ENDPOINTS.COLOR_STUDIO_UPLOAD_STREAM, {
-      method: 'POST',
+    // 1. Inicializar upload no Stream
+    const initResponse = await apiRequest(API_ENDPOINTS.UPLOAD_STREAM, {
+      method: "POST",
       body: JSON.stringify({
         fileSize: file.size,
         fileName: file.name,
       }),
     });
 
-    if (!response.success) {
-      throw new Error(response.error || 'Failed to initialize upload');
+    if (!initResponse.success || !initResponse.uploadURL) {
+      throw new Error("Failed to get upload URL from Stream");
     }
 
-    console.log('✅ Stream upload initialized:', response.uid);
-    return response;
-  } catch (error) {
-    console.error('❌ Error initializing Stream upload:', error);
-    throw error;
-  }
-};
-
-/**
- * Faz upload do arquivo para Cloudflare Stream via TUS
- */
-export const uploadToStream = async (file, uploadURL, onProgress) => {
-  try {
-    console.log('📤 Uploading to Stream via TUS...');
+    console.log("✅ Stream session created:", initResponse.uid);
     
+    // 2. Upload via TUS protocol
+    const uploadURL = initResponse.uploadURL;
     const chunkSize = 5 * 1024 * 1024; // 5MB chunks
     let offset = 0;
 
     while (offset < file.size) {
       const chunk = file.slice(offset, offset + chunkSize);
       
+      console.log(`📤 Uploading chunk: ${offset} - ${offset + chunk.size} / ${file.size}`);
+      
       const response = await fetch(uploadURL, {
-        method: 'PATCH',
+        method: "PATCH",
         headers: {
-          'Content-Type': 'application/offset+octet-stream',
-          'Upload-Offset': offset.toString(),
-          'Tus-Resumable': '1.0.0',
+          "Content-Type": "application/offset+octet-stream",
+          "Upload-Offset": offset.toString(),
+          "Tus-Resumable": "1.0.0",
         },
         body: chunk,
       });
 
       if (!response.ok) {
-        throw new Error(`Upload failed at offset ${offset}`);
+        throw new Error(`Upload failed at offset ${offset}: ${response.status}`);
       }
 
       offset += chunk.size;
@@ -78,106 +72,107 @@ export const uploadToStream = async (file, uploadURL, onProgress) => {
           percentage: Math.round((offset / file.size) * 100),
         });
       }
-
-      console.log(`✅ Uploaded ${offset} / ${file.size} bytes`);
     }
 
-    console.log('🎉 Upload to Stream complete!');
-    return { success: true };
+    console.log("🎉 Upload to Stream complete!");
+    console.log("   Stream UID:", initResponse.uid);
+    console.log("   ✅ PREVIEW DISPONÍVEL após processamento!");
+    
+    return {
+      success: true,
+      type: "stream",
+      uid: initResponse.uid,
+      message: "Upload concluído! Processando preview...",
+    };
+    
   } catch (error) {
-    console.error('❌ Error uploading to Stream:', error);
+    console.error("❌ Error uploading to Stream:", error);
     throw error;
   }
 };
 
 /**
- * Inicializa upload para R2 (arquivos RAW)
+ * FLUXO 2: Upload RAW para R2 → Conversão → Stream
  */
-export const initRawUpload = async (file) => {
+export const uploadRawToR2 = async (file, onProgress) => {
   try {
-    console.log('📤 Initializing RAW upload:', file.name);
+    console.log("🎥 FLUXO RAW: Iniciando upload RAW...");
+    console.log("   Arquivo:", file.name);
+    console.log("   Tamanho:", (file.size / 1024 / 1024).toFixed(2), "MB");
+    console.log("   1️⃣ Upload para R2");
+    console.log("   2️⃣ Conversão para H.265");
+    console.log("   3️⃣ Upload para Stream");
+    console.log("   4️⃣ Preview disponível");
     
-    const response = await apiRequest(API_ENDPOINTS.COLOR_STUDIO_UPLOAD_RAW_INIT, {
-      method: 'POST',
+    // 1. Inicializar upload multipart no R2
+    const initResponse = await apiRequest(API_ENDPOINTS.UPLOAD_RAW_INIT, {
+      method: "POST",
       body: JSON.stringify({
         fileName: file.name,
         fileSize: file.size,
       }),
     });
 
-    if (!response.success) {
-      throw new Error(response.error || 'Failed to initialize RAW upload');
+    if (!initResponse.success) {
+      throw new Error("Failed to initialize RAW upload");
     }
 
-    console.log('✅ RAW upload initialized:', response.uploadId);
-    return response;
+    console.log("✅ R2 multipart upload initialized");
+    console.log("   Upload ID:", initResponse.uploadId);
+    console.log("   Key:", initResponse.key);
+    
+    // TODO: Implementar upload multipart completo
+    // Por enquanto, apenas retorna inicialização
+    
+    return {
+      success: true,
+      type: "raw",
+      uploadId: initResponse.uploadId,
+      key: initResponse.key,
+      message: "Upload RAW iniciado! Aguardando implementação completa...",
+    };
+    
   } catch (error) {
-    console.error('❌ Error initializing RAW upload:', error);
+    console.error("❌ Error uploading RAW:", error);
     throw error;
   }
 };
 
 /**
- * Verifica status de um vídeo no Stream
- */
-export const checkVideoStatus = async (videoId) => {
-  try {
-    const url = `${API_ENDPOINTS.COLOR_STUDIO_VIDEO_STATUS}?videoId=${videoId}`;
-    const response = await apiRequest(url);
-    return response;
-  } catch (error) {
-    console.error('❌ Error checking video status:', error);
-    throw error;
-  }
-};
-
-/**
- * Função principal de upload - detecta tipo e roteia
+ * Função principal: detecta tipo e roteia para fluxo correto
  */
 export const uploadFile = async (file, onProgress) => {
   try {
-    console.log('🎬 Starting upload for:', file.name);
+    console.log("═══════════════════════════════════════");
+    console.log("🎬 INICIANDO UPLOAD");
+    console.log("   Arquivo:", file.name);
+    console.log("   Tipo:", file.type);
+    console.log("   Tamanho:", (file.size / 1024 / 1024).toFixed(2), "MB");
+    console.log("═══════════════════════════════════════");
     
-    // Verificar se é RAW ou Standard
     const isRaw = isRawFormat(file.name);
     
     if (isRaw) {
-      // Upload RAW para R2
-      console.log('🎥 Detected RAW format, uploading to R2...');
-      const initResponse = await initRawUpload(file);
-      
-      // TODO: Implementar upload multipart para R2
-      // Por enquanto, retorna apenas a inicialização
-      return {
-        success: true,
-        type: 'raw',
-        data: initResponse,
-      };
+      // FLUXO RAW
+      console.log("🎯 Detectado: ARQUIVO RAW");
+      console.log("📍 Rota: R2 → H.265 → Stream → Preview");
+      return await uploadRawToR2(file, onProgress);
     } else {
-      // Upload Standard para Stream
-      console.log('📹 Detected standard format, uploading to Stream...');
-      const initResponse = await initStreamUpload(file);
-      
-      // Fazer upload via TUS
-      await uploadToStream(file, initResponse.uploadURL, onProgress);
-      
-      return {
-        success: true,
-        type: 'stream',
-        uid: initResponse.uid,
-      };
+      // FLUXO STREAM DIRETO
+      console.log("🎯 Detectado: VÍDEO STANDARD");
+      console.log("📍 Rota: Stream → Preview");
+      return await uploadToStream(file, onProgress);
     }
+    
   } catch (error) {
-    console.error('❌ Upload failed:', error);
+    console.error("❌ Upload failed:", error);
     throw error;
   }
 };
 
 export default {
   isRawFormat,
-  initStreamUpload,
   uploadToStream,
-  initRawUpload,
-  checkVideoStatus,
+  uploadRawToR2,
   uploadFile,
 };

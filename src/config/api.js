@@ -1,42 +1,38 @@
 /**
  * Configuração da API do Color Studio
- * Usa VITE_API_URL do ambiente ou fallback para localhost
+ * AJUSTADO PARA USAR O BACKEND CORRETO
  */
 
-// Pegar URL da API das variáveis de ambiente
+// IMPORTANTE: URL do BACKEND (não do frontend!)
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 
 // Remover barra final se existir
 const baseURL = API_URL.endsWith('/') ? API_URL.slice(0, -1) : API_URL;
 
+console.log('🔧 API Config loaded:');
+console.log('   Base URL:', baseURL);
+console.log('   VITE_API_URL:', import.meta.env.VITE_API_URL);
+
 // Endpoints da API
 export const API_ENDPOINTS = {
   // Color Studio
-  COLOR_STUDIO_STATUS: `${baseURL}/api/color-studio/status`,
-  COLOR_STUDIO_UPLOAD_STREAM: `${baseURL}/api/color-studio/upload-url`,
-  COLOR_STUDIO_UPLOAD_RAW_INIT: `${baseURL}/api/color-studio/upload/raw/init`,
-  COLOR_STUDIO_UPLOAD_RAW_PART: `${baseURL}/api/color-studio/upload/raw/part-url`,
-  COLOR_STUDIO_UPLOAD_RAW_COMPLETE: `${baseURL}/api/color-studio/upload/raw/complete`,
-  COLOR_STUDIO_VIDEO_STATUS: `${baseURL}/api/color-studio/video-status`,
-  COLOR_STUDIO_CONVERT_RAW: `${baseURL}/api/color-studio/convert/raw`,
-};
-
-// Configuração padrão do Axios/Fetch
-export const API_CONFIG = {
-  baseURL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-  timeout: 60000, // 60 segundos
+  STATUS: `${baseURL}/api/color-studio/status`,
+  UPLOAD_STREAM: `${baseURL}/api/color-studio/upload-url`,
+  UPLOAD_RAW_INIT: `${baseURL}/api/color-studio/upload/raw/init`,
+  UPLOAD_RAW_COMPLETE: `${baseURL}/api/color-studio/upload/raw/complete`,
+  VIDEO_STATUS: `${baseURL}/api/color-studio/video-status`,
+  CONVERT_RAW: `${baseURL}/api/color-studio/convert/raw`,
 };
 
 // Helper para fazer requisições
 export const apiRequest = async (url, options = {}) => {
   try {
+    console.log(`📡 API Request: ${url}`);
+    
     const response = await fetch(url, {
       ...options,
       headers: {
-        ...API_CONFIG.headers,
+        'Content-Type': 'application/json',
         ...options.headers,
       },
     });
@@ -46,25 +42,18 @@ export const apiRequest = async (url, options = {}) => {
       throw new Error(error.error || `HTTP Error: ${response.status}`);
     }
 
-    return await response.json();
+    const data = await response.json();
+    console.log(`✅ API Response OK:`, data);
+    return data;
+    
   } catch (error) {
-    console.error('API Request Error:', error);
+    console.error('❌ API Request Error:', error);
     throw error;
   }
 };
 
-// Log da configuração (apenas em desenvolvimento)
-if (import.meta.env.DEV) {
-  console.log('🔧 API Configuration:');
-  console.log('  Base URL:', baseURL);
-  console.log('  Environment:', import.meta.env.MODE);
-  console.log('  VITE_API_URL:', import.meta.env.VITE_API_URL);
-}
-
 export default {
-  API_URL: baseURL,
+  baseURL,
   API_ENDPOINTS,
-  API_CONFIG,
   apiRequest,
 };
-
