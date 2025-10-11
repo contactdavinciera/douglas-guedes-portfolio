@@ -192,6 +192,13 @@ def create_app():
         transcode_bp = None
         print("⚠️ Warning: transcode_routes not found")
 
+    # Import stream routes
+    try:
+        from routes.stream_routes import stream_bp
+    except ImportError:
+        stream_bp = None
+        print("⚠️ Warning: stream_routes not found")
+
     # ==========================================
     # REGISTRAR BLUEPRINTS
     # ==========================================
@@ -205,6 +212,8 @@ def create_app():
         app.register_blueprint(subtitle_bp)
     if transcode_bp:
         app.register_blueprint(transcode_bp, url_prefix='/api/transcode')
+    if stream_bp:
+        app.register_blueprint(stream_bp, url_prefix='/api/stream')
 
     # ==========================================
     # CRIAR TABELAS

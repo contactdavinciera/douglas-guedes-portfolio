@@ -3,8 +3,11 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import '../styles/maestro-timeline.css';
+import '../styles/maestro-enhancements.css';
 import { importMedia, pollTranscodeStatus } from '@/services/mediaImporter';
 import MaestroPlayer from '@/services/maestroPlayer';
+import MaestroWaveform from '@/components/MaestroWaveform';
+import MaestroScrubber from '@/components/MaestroScrubber';
 import {
   ResizableHandle,
   ResizablePanel,
@@ -83,6 +86,8 @@ const VideoEditor = () => {
   const [mediaSortBy, setMediaSortBy] = useState('name'); // 'name', 'duration', 'type'
   const [uploadProgress, setUploadProgress] = useState(null); // { filename, progress }
   const [transcodeJobs, setTranscodeJobs] = useState([]); // Active transcode jobs
+  const [scrubber, setScrubber] = useState({ visible: false, x: 0, y: 0, time: 0, thumbnail: null });
+  const [trimmingClip, setTrimmingClip] = useState(null); // { clipId, side: 'left'|'right' }
 
   // Refs
   const timelineRef = useRef(null);
@@ -665,6 +670,16 @@ const VideoEditor = () => {
 
   return (
     <div className="min-h-screen bg-[#1a1a1a] pt-20 pb-6 px-4">
+      {/* Thumbnail Scrubber */}
+      <MaestroScrubber
+        visible={scrubber.visible}
+        x={scrubber.x}
+        y={scrubber.y}
+        time={scrubber.time}
+        thumbnailURL={scrubber.thumbnail}
+        formatTimecode={formatTimecode}
+      />
+      
       {/* Main Editor Container - Below header */}
       <div className="w-full max-w-[98vw] h-[calc(100vh-7rem)] mx-auto bg-[#262626] rounded-lg overflow-hidden shadow-2xl flex flex-col">
         
@@ -990,7 +1005,23 @@ const VideoEditor = () => {
                 </div>
 
                 {/* Professional Timecode Ruler - DaVinci Style */}
-                <div className="maestro-ruler" onClick={handleTimelineClick}>
+                <div 
+                  className="maestro-ruler" 
+                  onClick={handleTimelineClick}
+                  onMouseMove={(e) => {
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const time = (x / rect.width) * duration;
+                    setScrubber({
+                      visible: true,
+                      x: e.clientX,
+                      y: e.clientY,
+                      time: Math.max(0, Math.min(duration, time)),
+                      thumbnail: null // Would fetch thumbnail here
+                    });
+                  }}
+                  onMouseLeave={() => setScrubber({ ...scrubber, visible: false })}
+                >
                   <div 
                     className="absolute inset-0 overflow-hidden"
                     style={{ width: '100%' }}
