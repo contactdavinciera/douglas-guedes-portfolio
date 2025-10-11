@@ -743,31 +743,27 @@ const VideoEditor = () => {
           break;
         case 'arrowup': // Arrow Up - Jump to PREVIOUS edit point
           e.preventDefault();
+          console.log('⬆️ Arrow UP pressed! Clips:', timelineClips.length, 'Current time:', currentTime.toFixed(2));
+          setJumpFeedback('⬆️ PREV EDIT');
+          setTimeout(() => setJumpFeedback(null), 800);
           EditingFunctions.jumpToClip(
             'prev',
             currentTime,
             timelineClips,
-            (time) => {
-              setCurrentTime(time);
-              // Show visual feedback
-              setJumpFeedback('⬆️ PREV EDIT');
-              setTimeout(() => setJumpFeedback(null), 800);
-            },
+            setCurrentTime,
             setSelectedClip
           );
           break;
         case 'arrowdown': // Arrow Down - Jump to NEXT edit point
           e.preventDefault();
+          console.log('⬇️ Arrow DOWN pressed! Clips:', timelineClips.length, 'Current time:', currentTime.toFixed(2));
+          setJumpFeedback('⬇️ NEXT EDIT');
+          setTimeout(() => setJumpFeedback(null), 800);
           EditingFunctions.jumpToClip(
             'next',
             currentTime,
             timelineClips,
-            (time) => {
-              setCurrentTime(time);
-              // Show visual feedback
-              setJumpFeedback('⬇️ NEXT EDIT');
-              setTimeout(() => setJumpFeedback(null), 800);
-            },
+            setCurrentTime,
             setSelectedClip
           );
           break;
