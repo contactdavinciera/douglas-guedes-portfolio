@@ -25,12 +25,13 @@ npm run dev
 - Frontend: http://localhost:5173
 - Backend API: http://localhost:5001/health
 
-## Full Documentation
+## Documentation
 
-For complete setup instructions, troubleshooting, and development workflow, see:
+### Getting Started
+- **[QUICK_START.md](./QUICK_START.md)** - 🚀 Get running in 3 simple steps!
 - **[DEVELOPER.md](./DEVELOPER.md)** - Complete developer guide with detailed setup instructions
 
-## Additional Documentation
+### Additional Resources
 - **[final_report.md](./final_report.md)** - Implementation details and testing report
 - **[ffmpeg_render_verification.md](./ffmpeg_render_verification.md)** - FFmpeg setup guide
 - **[conversion_streaming_monitoring.md](./conversion_streaming_monitoring.md)** - Monitoring guide

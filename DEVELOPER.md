@@ -7,6 +7,18 @@ Maestro is a web-based video editing application that provides functionalities s
 - **Frontend**: React application built with Vite
 - **Backend**: Flask (Python) API server
 
+## Quick Command Reference
+
+| Action | Linux/macOS | Windows |
+|--------|-------------|---------|
+| Start both servers | `./start-servers.sh` | (not available) |
+| Start backend only | `./start-backend.sh` | `start-backend.bat` |
+| Start frontend only | `./start-frontend.sh` | `start-frontend.bat` |
+| Install backend deps | `cd color-studio-backend && pip install -r requirements.txt` | Same |
+| Install frontend deps | `npm install` | Same |
+| Build frontend | `npm run build` | Same |
+| Run linter | `npm run lint` | Same |
+
 ## Prerequisites
 
 Before starting the servers, ensure you have the following installed:
@@ -46,13 +58,23 @@ This will:
 
 **Backend only:**
 ```bash
+# Linux/macOS
 ./start-backend.sh
+
+# Windows
+start-backend.bat
 ```
 
 **Frontend only:**
 ```bash
+# Linux/macOS
 ./start-frontend.sh
+
+# Windows
+start-frontend.bat
 ```
+
+> **Note**: Windows users should use the `.bat` scripts, while Linux/macOS users should use the `.sh` scripts.
 
 ### Option B: Manual Setup
 
@@ -157,6 +179,25 @@ You should see output similar to:
 Open your web browser and navigate to:
 - **Frontend**: http://localhost:5173
 - **Backend API**: http://localhost:5001/health (health check endpoint)
+
+### 6. Verify Everything is Working
+
+**Test Backend Health Check:**
+```bash
+curl http://localhost:5001/health
+```
+
+Expected response:
+```json
+{
+  "status": "ok",
+  "service": "Douglas Guedes Portfolio Backend",
+  "version": "1.0.0"
+}
+```
+
+**Test Frontend:**
+Open http://localhost:5173 in your browser. You should see the Maestro application interface.
 
 ## Detailed Setup Instructions
 
