@@ -182,84 +182,113 @@ export const razorCut = (currentTime, clips, setClips, selectedClipIds = null) =
 };
 
 // Jump to Next/Previous Edit Point (Arrow Up/Down)
-// PROFESSIONAL: Snaps to exact edit points (start/end of clips)
+// PROFESSIONAL: Navigates through IN and OUT points of clips in sequence
+// Each clip has 2 edit points: IN (start) and OUT (end) on timeline
 export const jumpToClip = (direction, currentTime, clips, setCurrentTime, setSelectedClip) => {
-  console.log(`🎯 jumpToClip called:`, { 
+  console.log(`🎯 Navigate Edit Points:`, { 
     direction, 
-    currentTime: currentTime.toFixed(2), 
+    currentTime: currentTime.toFixed(3), 
     clipCount: clips.length 
   });
 
-  // Get ALL edit points (start and end of each clip)
+  // Build edit points array with IN and OUT for each clip
   const editPoints = [];
   
   clips.forEach(clip => {
+    // IN point (where clip starts on timeline)
+    const inPoint = clip.startTime;
+    
+    // OUT point (where clip ends on timeline)
+    // This respects the clip's actual duration in the timeline
+    const outPoint = clip.startTime + clip.duration;
+    
     editPoints.push({
-      time: clip.startTime,
-      type: 'start',
+      time: inPoint,
+      type: 'IN',
       clipId: clip.id,
-      clipName: clip.id
+      clipName: clip.id,
+      mediaIn: clip.inPoint || 0,
+      mediaOut: clip.outPoint || clip.duration
     });
+    
     editPoints.push({
-      time: clip.startTime + clip.duration,
-      type: 'end',
+      time: outPoint,
+      type: 'OUT',
       clipId: clip.id,
-      clipName: clip.id
+      clipName: clip.id,
+      mediaIn: clip.inPoint || 0,
+      mediaOut: clip.outPoint || clip.duration
     });
   });
 
-  console.log(`📍 Edit points found:`, editPoints.map(p => `${p.time.toFixed(2)}s (${p.type})`));
+  // Sort by time
+  editPoints.sort((a, b) => a.time - b.time);
+  
+  console.log(`📍 Edit points (IN/OUT sequence):`, 
+    editPoints.map(p => `${p.time.toFixed(2)}s [${p.type}] ${p.clipId}`)
+  );
 
-  // Remove duplicates and sort
-  const uniquePoints = Array.from(
-    new Set(editPoints.map(p => p.time))
-  ).sort((a, b) => a - b);
-
+  // Get unique timeline positions
+  const uniqueTimes = [...new Set(editPoints.map(p => p.time))].sort((a, b) => a - b);
+  
   // Add timeline start if not present
-  if (!uniquePoints.includes(0)) {
-    uniquePoints.unshift(0);
+  if (!uniqueTimes.includes(0)) {
+    uniqueTimes.unshift(0);
   }
 
-  console.log(`✅ Unique edit points:`, uniquePoints.map(t => t.toFixed(2)));
+  console.log(`✅ Unique positions:`, uniqueTimes.map(t => t.toFixed(2)));
 
-  const THRESHOLD = 0.01; // 10ms threshold for "same position"
+  const THRESHOLD = 0.04; // 40ms threshold (almost 1 frame at 24fps)
 
   if (direction === 'next') {
-    // Find next edit point AFTER current time (with threshold)
-    const nextPoint = uniquePoints.find(time => time > currentTime + THRESHOLD);
+    // Find NEXT edit point after current position
+    const nextTime = uniqueTimes.find(time => time > currentTime + THRESHOLD);
     
-    if (nextPoint !== undefined) {
-      setCurrentTime(nextPoint);
+    if (nextTime !== undefined) {
+      setCurrentTime(nextTime);
       
-      // Select clip that starts at this point
-      const clipAtPoint = clips.find(c => Math.abs(c.startTime - nextPoint) < THRESHOLD);
-      if (clipAtPoint) {
-        setSelectedClip(clipAtPoint.id);
-        console.log(`⬇️ Jumped to NEXT edit: ${nextPoint.toFixed(2)}s (${clipAtPoint.id})`);
+      // Find which edit point this is
+      const editPoint = editPoints.find(ep => Math.abs(ep.time - nextTime) < THRESHOLD);
+      
+      if (editPoint) {
+        // If it's an IN point, select the clip
+        if (editPoint.type === 'IN') {
+          setSelectedClip(editPoint.clipId);
+        }
+        
+        console.log(`⬇️ NEXT EDIT: ${nextTime.toFixed(2)}s → ${editPoint.type} of ${editPoint.clipId}`);
+        console.log(`   Media range: ${editPoint.mediaIn}s - ${editPoint.mediaOut}s`);
       } else {
-        console.log(`⬇️ Jumped to NEXT edit: ${nextPoint.toFixed(2)}s (end of clip)`);
+        console.log(`⬇️ NEXT EDIT: ${nextTime.toFixed(2)}s`);
       }
     } else {
       console.log(`⬇️ Already at last edit point`);
     }
-  } else if (direction === 'prev') {
-    // Find previous edit point BEFORE current time (with threshold)
-    const prevPoints = uniquePoints.filter(time => time < currentTime - THRESHOLD);
-    const prevPoint = prevPoints[prevPoints.length - 1];
     
-    if (prevPoint !== undefined) {
-      setCurrentTime(prevPoint);
+  } else if (direction === 'prev') {
+    // Find PREVIOUS edit point before current position
+    const prevTimes = uniqueTimes.filter(time => time < currentTime - THRESHOLD);
+    const prevTime = prevTimes[prevTimes.length - 1];
+    
+    if (prevTime !== undefined) {
+      setCurrentTime(prevTime);
       
-      // Select clip that starts at this point
-      const clipAtPoint = clips.find(c => Math.abs(c.startTime - prevPoint) < THRESHOLD);
-      if (clipAtPoint) {
-        setSelectedClip(clipAtPoint.id);
-        console.log(`⬆️ Jumped to PREV edit: ${prevPoint.toFixed(2)}s (${clipAtPoint.id})`);
+      // Find which edit point this is
+      const editPoint = editPoints.find(ep => Math.abs(ep.time - prevTime) < THRESHOLD);
+      
+      if (editPoint) {
+        // If it's an IN point, select the clip
+        if (editPoint.type === 'IN') {
+          setSelectedClip(editPoint.clipId);
+        }
+        
+        console.log(`⬆️ PREV EDIT: ${prevTime.toFixed(2)}s → ${editPoint.type} of ${editPoint.clipId}`);
+        console.log(`   Media range: ${editPoint.mediaIn}s - ${editPoint.mediaOut}s`);
       } else {
-        console.log(`⬆️ Jumped to PREV edit: ${prevPoint.toFixed(2)}s`);
+        console.log(`⬆️ PREV EDIT: ${prevTime.toFixed(2)}s`);
       }
     } else {
-      // Go to start
+      // Go to timeline start
       setCurrentTime(0);
       setSelectedClip(null);
       console.log(`⬆️ Jumped to timeline START (00:00:00:00)`);
