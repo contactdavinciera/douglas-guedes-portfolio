@@ -185,6 +185,13 @@ def create_app():
         subtitle_bp = None
         print("⚠️ Warning: subtitle_routes not found")
 
+    # Import transcode routes
+    try:
+        from routes.transcode_routes import transcode_bp
+    except ImportError:
+        transcode_bp = None
+        print("⚠️ Warning: transcode_routes not found")
+
     # ==========================================
     # REGISTRAR BLUEPRINTS
     # ==========================================
@@ -196,6 +203,8 @@ def create_app():
     app.register_blueprint(conversion_bp, url_prefix='/api/conversion')
     if subtitle_bp:
         app.register_blueprint(subtitle_bp)
+    if transcode_bp:
+        app.register_blueprint(transcode_bp, url_prefix='/api/transcode')
 
     # ==========================================
     # CRIAR TABELAS
