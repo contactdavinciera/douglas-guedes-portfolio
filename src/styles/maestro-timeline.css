@@ -459,6 +459,58 @@
   text-shadow: 0 0 4px rgba(0,0,0,0.8);
 }
 
+/* Timeline Ruler - Professional Timecode */
+.timeline-ruler-container {
+  position: relative;
+  width: 100%;
+  user-select: none;
+}
+
+.timeline-ruler {
+  position: relative;
+  transition: none;
+}
+
+.timeline-ruler:active {
+  cursor: grabbing !important;
+}
+
+/* Ruler scrubbing cursor */
+.timeline-ruler:hover {
+  cursor: crosshair;
+}
+
+/* Smooth dragging */
+.timeline-ruler.dragging {
+  cursor: grabbing !important;
+}
+
+/* Frame-accurate snapping */
+.timeline-ruler-tick {
+  position: absolute;
+  top: 0;
+  pointer-events: none;
+}
+
+/* Hover tooltip */
+.timeline-ruler-tooltip {
+  background: rgba(59, 130, 246, 0.95);
+  backdrop-filter: blur(4px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  animation: fadeIn 0.1s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
 /* Buttons and interactive elements keep their cursor */
 .maestro-software-mode button,
 .maestro-timeline button,

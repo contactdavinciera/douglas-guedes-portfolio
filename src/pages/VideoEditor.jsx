@@ -10,6 +10,7 @@ import MaestroWaveform from '@/components/MaestroWaveform';
 import MaestroScrubber from '@/components/MaestroScrubber';
 import MediaImportDialog from '@/components/MediaImportDialog';
 import ProjectSettingsDialog from '@/components/ProjectSettingsDialog';
+import TimelineRuler from '@/components/TimelineRuler';
 import * as EditingFunctions from '@/services/editingFunctions';
 import {
   ResizableHandle,
@@ -1262,80 +1263,23 @@ const VideoEditor = () => {
                   </div>
                 </div>
 
-                {/* Professional Timecode Ruler - DaVinci Style */}
-                <div 
-                  className="maestro-ruler" 
-                  onClick={handleTimelineClick}
-                  onMouseMove={(e) => {
-                    const rect = e.currentTarget.getBoundingClientRect();
-                    const x = e.clientX - rect.left;
-                    const time = (x / rect.width) * duration;
-                    setScrubber({
-                      visible: true,
-                      x: e.clientX,
-                      y: e.clientY,
-                      time: Math.max(0, Math.min(duration, time)),
-                      thumbnail: null // Would fetch thumbnail here
-                    });
+                {/* Professional Timecode Ruler - Frame Accurate */}
+                <TimelineRuler
+                  duration={duration}
+                  currentTime={currentTime}
+                  onSeek={(time) => {
+                    setCurrentTime(time);
+                    setIsPlaying(false); // Pause when scrubbing
                   }}
-                  onMouseLeave={() => setScrubber({ ...scrubber, visible: false })}
+                  zoomLevel={zoomLevel}
+                  projectSettings={projectSettings}
+                />
+
+                {/* Timeline Tracks Container */}
+                <div 
+                  className="maestro-timeline-area relative" 
+                  onClick={handleTimelineClick}
                 >
-                  <div 
-                    className="absolute inset-0 overflow-hidden"
-                    style={{ width: '100%' }}
-                  >
-                    {/* Major ticks (every 10 seconds) with timecode */}
-                    {Array.from({ length: Math.ceil(duration / 10) + 1 }).map((_, i) => (
-                      <React.Fragment key={`major-${i}`}>
-                        <div 
-                          className="maestro-ruler-tick major"
-                          style={{ left: `${(i * 10 / duration) * 100 * zoomLevel}%` }}
-                        />
-                        <div 
-                          className="maestro-ruler-label"
-                          style={{ left: `${(i * 10 / duration) * 100 * zoomLevel}%` }}
-                        >
-                          {formatTimecode(i * 10)}
-                        </div>
-                        {/* Frame number below timecode */}
-                        {zoomLevel > 5 && (
-                          <div 
-                            className="maestro-ruler-label frame-number"
-                            style={{ left: `${(i * 10 / duration) * 100 * zoomLevel}%` }}
-                          >
-                            {Math.floor(i * 10 * 24)}
-                          </div>
-                        )}
-                      </React.Fragment>
-                    ))}
-                    
-                    {/* Minor ticks (every second) */}
-                    {zoomLevel > 1.5 && Array.from({ length: Math.ceil(duration) }).map((_, i) => {
-                      if (i % 10 === 0) return null; // Skip major ticks
-                      return (
-                        <div 
-                          key={`minor-${i}`}
-                          className="maestro-ruler-tick minor"
-                          style={{ left: `${(i / duration) * 100 * zoomLevel}%` }}
-                        />
-                      );
-                    })}
-                    
-                    {/* Micro ticks (frames) - only at high zoom */}
-                    {zoomLevel > 4 && Array.from({ length: Math.ceil(duration * 24) }).map((_, i) => {
-                      const sec = i / 24;
-                      // Skip if it's a major or minor tick
-                      if (sec % 10 === 0 || sec % 1 === 0) return null;
-                      return (
-                        <div 
-                          key={`micro-${i}`}
-                          className="maestro-ruler-tick micro"
-                          style={{ left: `${(sec / duration) * 100 * zoomLevel}%` }}
-                        />
-                      );
-                    })}
-                  </div>
-                  
                   {/* Markers */}
                   {markers.map(marker => (
                     <div
