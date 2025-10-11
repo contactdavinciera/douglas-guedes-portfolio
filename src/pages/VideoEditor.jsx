@@ -48,7 +48,6 @@ const VideoEditor = () => {
   // State
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(300); // 5 min default
   const [zoomLevel, setZoomLevel] = useState(1);
   const [selectedClip, setSelectedClip] = useState(null);
   const [snapToGrid, setSnapToGrid] = useState(true);
@@ -86,6 +85,7 @@ const VideoEditor = () => {
     { id: 'm2', time: 75, color: 'green', label: 'Music Cue', type: 'audio' },
   ]);
   const [tracks, setTracks] = useState([
+    { id: 'v2', name: 'V2', type: 'video', locked: false, solo: false, muted: false, height: 80 },
     { id: 'v1', name: 'V1', type: 'video', locked: false, solo: false, muted: false, height: 80 },
     { id: 'a1', name: 'A1', type: 'audio', locked: false, solo: false, muted: false, height: 60 },
     { id: 'a2', name: 'A2', type: 'audio', locked: false, solo: false, muted: false, height: 60 },
@@ -112,6 +112,26 @@ const VideoEditor = () => {
   const playheadRef = useRef(null);
   const maestroPlayer = useRef(null);
 
+  // Calculate INFINITE timeline duration
+  // Duration = max clip end + 60s buffer OR current playhead + 60s
+  const calculateTimelineDuration = () => {
+    const maxClipEnd = timelineClips.reduce((max, clip) => {
+      const clipEnd = clip.startTime + clip.duration;
+      return Math.max(max, clipEnd);
+    }, 0);
+    
+    const minDuration = 300; // 5 minutes minimum
+    const buffer = 60; // Always have 60s after last clip or playhead
+    
+    return Math.max(
+      minDuration,
+      maxClipEnd + buffer,
+      currentTime + buffer
+    );
+  };
+
+  const duration = calculateTimelineDuration();
+
   // Timecode formatting
   const formatTimecode = (seconds) => {
     const h = Math.floor(seconds / 3600);
@@ -131,9 +151,59 @@ const VideoEditor = () => {
     setCurrentTime(Math.max(0, Math.min(duration, newTime)));
   };
 
-  // Zoom controls
-  const handleZoomIn = () => setZoomLevel(prev => Math.min(prev * 1.5, 10));
-  const handleZoomOut = () => setZoomLevel(prev => Math.max(prev / 1.5, 0.5));
+  // Zoom controls - KEEP PLAYHEAD CENTERED
+  const handleZoomIn = () => {
+    const timeline = timelineRef.current;
+    if (!timeline) return;
+
+    // Get current scroll position and playhead position
+    const scrollLeft = timeline.scrollLeft;
+    const scrollWidth = timeline.scrollWidth;
+    const clientWidth = timeline.clientWidth;
+    const playheadPos = (currentTime / duration) * scrollWidth;
+    
+    setZoomLevel(prev => {
+      const newZoom = Math.min(prev * 1.5, 10);
+      
+      // Calculate new scroll to keep playhead centered
+      setTimeout(() => {
+        if (timeline) {
+          const newScrollWidth = duration * newZoom * 10;
+          const newPlayheadPos = (currentTime / duration) * newScrollWidth;
+          const centerOffset = clientWidth / 2;
+          timeline.scrollLeft = newPlayheadPos - centerOffset;
+        }
+      }, 0);
+      
+      return newZoom;
+    });
+  };
+
+  const handleZoomOut = () => {
+    const timeline = timelineRef.current;
+    if (!timeline) return;
+
+    const scrollLeft = timeline.scrollLeft;
+    const scrollWidth = timeline.scrollWidth;
+    const clientWidth = timeline.clientWidth;
+    const playheadPos = (currentTime / duration) * scrollWidth;
+    
+    setZoomLevel(prev => {
+      const newZoom = Math.max(prev / 1.5, 0.5);
+      
+      // Calculate new scroll to keep playhead centered
+      setTimeout(() => {
+        if (timeline) {
+          const newScrollWidth = duration * newZoom * 10;
+          const newPlayheadPos = (currentTime / duration) * newScrollWidth;
+          const centerOffset = clientWidth / 2;
+          timeline.scrollLeft = newPlayheadPos - centerOffset;
+        }
+      }, 0);
+      
+      return newZoom;
+    });
+  };
 
   // Snap to grid
   const snapTime = (time) => {
@@ -585,10 +655,45 @@ const VideoEditor = () => {
     setTimelineClips(updatedClips);
   };
 
-  // Add track
+  // Add track dynamically
   const handleAddTrack = (type) => {
-    // Implementation for adding new tracks
-    console.log('Add track:', type);
+    const videoTracks = tracks.filter(t => t.type === 'video');
+    const audioTracks = tracks.filter(t => t.type === 'audio');
+    
+    let newTrack;
+    
+    if (type === 'video') {
+      const nextNum = videoTracks.length + 1;
+      newTrack = {
+        id: `v${nextNum}`,
+        name: `V${nextNum}`,
+        type: 'video',
+        locked: false,
+        solo: false,
+        muted: false,
+        height: 80
+      };
+      // Add video track at top (before other video tracks)
+      const firstVideoIndex = tracks.findIndex(t => t.type === 'video');
+      const newTracks = [...tracks];
+      newTracks.splice(firstVideoIndex, 0, newTrack);
+      setTracks(newTracks);
+    } else if (type === 'audio') {
+      const nextNum = audioTracks.length + 1;
+      newTrack = {
+        id: `a${nextNum}`,
+        name: `A${nextNum}`,
+        type: 'audio',
+        locked: false,
+        solo: false,
+        muted: false,
+        height: 60
+      };
+      // Add audio track at bottom
+      setTracks([...tracks, newTrack]);
+    }
+    
+    console.log(`✅ Added ${type} track:`, newTrack.id);
   };
 
   // Toggle track height
@@ -1366,6 +1471,29 @@ const VideoEditor = () => {
                       </div>
                     </div>
                   ))}
+                </div>
+
+                {/* Add Track Buttons */}
+                <div className="h-8 bg-[#1a1a1a] border-b border-gray-700 flex items-center justify-start px-2 gap-2">
+                  <button
+                    onClick={() => handleAddTrack('video')}
+                    className="px-3 py-1 bg-purple-600 hover:bg-purple-700 text-white text-xs rounded flex items-center gap-1"
+                    title="Add Video Track"
+                  >
+                    <Plus className="w-3 h-3" />
+                    <span>Add V</span>
+                  </button>
+                  <button
+                    onClick={() => handleAddTrack('audio')}
+                    className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white text-xs rounded flex items-center gap-1"
+                    title="Add Audio Track"
+                  >
+                    <Plus className="w-3 h-3" />
+                    <span>Add A</span>
+                  </button>
+                  <span className="text-gray-500 text-xs ml-2">
+                    {tracks.filter(t => t.type === 'video').length}V / {tracks.filter(t => t.type === 'audio').length}A
+                  </span>
                 </div>
 
                 {/* Timeline Tracks */}
