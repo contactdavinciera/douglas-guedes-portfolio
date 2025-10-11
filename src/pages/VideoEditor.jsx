@@ -1417,7 +1417,7 @@ const VideoEditor = () => {
                             </button>
                           </div>
                         </div>
-                      <div className="ml-16 h-full relative">
+                      <div className="ml-16 h-full relative" style={{ width: `${duration * zoomLevel * 10}px` }}>
                         {/* Professional Timeline Clips with Drag, Snap, Trim */}
                         {timelineClips.filter(c => c.track === track.id).map(clip => (
                           <TimelineClip
@@ -1425,7 +1425,7 @@ const VideoEditor = () => {
                             clip={clip}
                             allClips={timelineClips}
                             tracks={tracks}
-                            scale={(duration * 100) / (duration * zoomLevel)} // pixels per second
+                            scale={zoomLevel * 10} // pixels per second (10px base * zoom)
                             onMove={handleClipMove}
                             onTrim={handleClipTrim}
                             onSelect={handleClipSelect}

@@ -21,26 +21,36 @@ const TimelineClip = ({
   const [hoverEdge, setHoverEdge] = useState(null);
   const [snapIndicator, setSnapIndicator] = useState(null);
 
-  const clipWidth = clip.duration * scale;
+  // Calculate position and size
+  // Scale is pixels per second
+  const clipWidth = Math.max(1, clip.duration * scale); // Minimum 1px
   const clipLeft = clip.startTime * scale;
 
   // Get track info
   const track = tracks.find(t => t.id === clip.track);
   const isLocked = track?.locked || false;
 
+  // Debug
+  console.log(`Clip ${clip.id}: left=${clipLeft}px, width=${clipWidth}px, scale=${scale}`);
+
   // Handle mouse down - start drag/trim
   const handleMouseDown = (e, type) => {
     if (isLocked) return;
     
     e.stopPropagation();
+    e.preventDefault(); // Prevent text selection
     onSelect(clip.id, e.shiftKey);
 
     setIsDragging(true);
     setDragType(type);
     setDragStart({
       x: e.clientX,
-      time: clip.startTime
+      time: clip.startTime,
+      inPoint: clip.inPoint || 0,
+      outPoint: clip.outPoint || clip.duration
     });
+    
+    console.log(`Start drag ${type}:`, { x: e.clientX, time: clip.startTime });
   };
 
   // Handle mouse move - drag/trim
@@ -52,7 +62,7 @@ const TimelineClip = ({
       const deltaTime = deltaX / scale;
 
       if (dragType === 'move') {
-        let newTime = dragStart.time + deltaTime;
+        let newTime = Math.max(0, dragStart.time + deltaTime); // Prevent negative time
 
         // Snap if enabled
         if (snapEnabled) {
@@ -81,16 +91,21 @@ const TimelineClip = ({
 
         if (validation.valid) {
           onMove(clip.id, newTime, clip.track);
+        } else {
+          console.warn('Invalid move:', validation.reason);
         }
 
       } else if (dragType === 'trim-start' || dragType === 'trim-end') {
         const trimResult = ClipInteractions.calculateTrim(
           clip,
           dragType === 'trim-start' ? 'start' : 'end',
-          deltaTime
+          deltaTime,
+          0.1 // minimum duration
         );
 
-        onTrim(clip.id, trimResult);
+        if (trimResult) {
+          onTrim(clip.id, trimResult);
+        }
       }
     };
 
@@ -107,7 +122,7 @@ const TimelineClip = ({
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [isDragging, dragType, dragStart, clip, scale, snapEnabled]);
+  }, [isDragging, dragType, dragStart, clip, scale, snapEnabled, allClips, tracks, onMove, onTrim]);
 
   // Detect edge hover for trim cursor
   const handleMouseMove = (e) => {
