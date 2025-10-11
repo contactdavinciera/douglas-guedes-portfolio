@@ -13,6 +13,9 @@ console.log('🔧 API Config loaded:');
 console.log('   Base URL:', baseURL);
 console.log('   VITE_API_URL:', import.meta.env.VITE_API_URL);
 
+// Export as API_BASE_URL for compatibility
+export const API_BASE_URL = baseURL;
+
 // Endpoints da API
 export const API_ENDPOINTS = {
   // Color Studio
