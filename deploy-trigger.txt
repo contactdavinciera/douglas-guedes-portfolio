@@ -1,2 +1,14 @@
-Deploy trigger - $(date)
-Forçando novo deploy para ativar o novo token da API do Cloudflare Stream.
+Deploy trigger - October 11, 2025
+MAESTRO NLE COMPLETE! 
+- Conductor's baton playhead (z-index 999999)
+- Drag clips between tracks
+- Layer priority system
+- Frame-accurate navigation (24fps)
+- Arrow Up/Down clip jumping
+- Alt+Arrow layer movement
+- Software mode (no text selection)
+- Waveforms & thumbnail scrubber
+- Complete media import pipeline
+- Hybrid playback system
+
+🎼 MAESTRO IS READY FOR PRODUCTION!
