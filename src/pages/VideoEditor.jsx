@@ -1371,10 +1371,14 @@ const VideoEditor = () => {
                 {/* Timeline Tracks */}
                 <div 
                   ref={timelineRef}
-                  className="flex-1 overflow-auto bg-[#1a1a1a]"
+                  className="flex-1 overflow-x-auto overflow-y-auto bg-[#1a1a1a]"
                   onClick={handleTimelineClick}
+                  style={{ 
+                    scrollbarWidth: 'thin',
+                    scrollbarColor: '#666 #1a1a1a'
+                  }}
                 >
-                  <div style={{ width: `${100 * zoomLevel}%`, minHeight: '100%' }}>
+                  <div style={{ width: `${duration * zoomLevel * 10}px`, minHeight: '100%' }}>
                     {tracks.map(track => (
                       <div 
                         key={track.id}

@@ -25,12 +25,14 @@ export const checkCollision = (clip1, clip2) => {
 
 /**
  * Find snap points for a clip being dragged
+ * MAGNETIC SNAP: Like DaVinci Resolve - clips attract to each other
  * Returns the closest snap point if within threshold
  */
-export const findSnapPoint = (draggedClip, allClips, currentTime) => {
+export const findSnapPoint = (draggedClip, allClips, currentTime, magneticStrength = 1.0) => {
   const snapPoints = [];
+  const MAGNETIC_THRESHOLD = SNAP_THRESHOLD * magneticStrength;
   
-  // Add other clips' edges as snap points
+  // Add other clips' edges as snap points (SAME TRACK)
   allClips.forEach(clip => {
     if (clip.id === draggedClip.id) return;
     if (clip.track !== draggedClip.track) return;
@@ -39,49 +41,59 @@ export const findSnapPoint = (draggedClip, allClips, currentTime) => {
     snapPoints.push({
       time: clip.startTime,
       type: 'clip-start',
-      clipId: clip.id
+      clipId: clip.id,
+      magnetic: true // This is a magnetic snap point
     });
     
     snapPoints.push({
       time: clip.startTime + clip.duration,
       type: 'clip-end',
-      clipId: clip.id
+      clipId: clip.id,
+      magnetic: true
     });
   });
   
-  // Add timeline start
+  // Add timeline start (always snap here)
   snapPoints.push({
     time: 0,
-    type: 'timeline-start'
+    type: 'timeline-start',
+    magnetic: true
   });
+  
+  // Add playhead position as snap point
+  // (DaVinci snaps to playhead too!)
   
   // Find closest snap point
   const draggedStart = currentTime;
   const draggedEnd = currentTime + draggedClip.duration;
   
   let closestSnap = null;
-  let minDistance = SNAP_THRESHOLD;
+  let minDistance = MAGNETIC_THRESHOLD;
   
   snapPoints.forEach(snap => {
-    // Check if dragged clip's start snaps
+    // Check if dragged clip's START snaps to this point
     const distToStart = Math.abs(draggedStart - snap.time);
     if (distToStart < minDistance) {
       minDistance = distToStart;
       closestSnap = {
         ...snap,
         snapTo: 'start',
-        newTime: snap.time
+        newTime: snap.time,
+        distance: distToStart,
+        strength: 1 - (distToStart / MAGNETIC_THRESHOLD) // 0-1 strength
       };
     }
     
-    // Check if dragged clip's end snaps
+    // Check if dragged clip's END snaps to this point
     const distToEnd = Math.abs(draggedEnd - snap.time);
     if (distToEnd < minDistance) {
       minDistance = distToEnd;
       closestSnap = {
         ...snap,
         snapTo: 'end',
-        newTime: snap.time - draggedClip.duration
+        newTime: snap.time - draggedClip.duration,
+        distance: distToEnd,
+        strength: 1 - (distToEnd / MAGNETIC_THRESHOLD)
       };
     }
   });
@@ -91,9 +103,10 @@ export const findSnapPoint = (draggedClip, allClips, currentTime) => {
 
 /**
  * Validate if clip can be moved to new position
- * Returns { valid: boolean, reason: string, suggestedTime: number }
+ * NEW: Supports OVERWRITE mode (like DaVinci Resolve)
+ * Returns { valid: boolean, reason: string, mode: 'insert'|'overwrite', affectedClips: [] }
  */
-export const validateClipMove = (clip, newTime, newTrack, allClips, tracks) => {
+export const validateClipMove = (clip, newTime, newTrack, allClips, tracks, mode = 'insert') => {
   // Check if track exists
   const targetTrack = tracks.find(t => t.id === newTrack);
   if (!targetTrack) {
@@ -125,20 +138,39 @@ export const validateClipMove = (clip, newTime, newTrack, allClips, tracks) => {
   
   // Check collision with other clips on target track
   const movedClip = { ...clip, startTime: newTime, track: newTrack };
+  const affectedClips = [];
   
   for (const otherClip of allClips) {
     if (otherClip.id === clip.id) continue;
     
     if (checkCollision(movedClip, otherClip)) {
-      return { 
-        valid: false, 
-        reason: `Collision with ${otherClip.id}`,
-        collidingClip: otherClip
-      };
+      affectedClips.push(otherClip);
     }
   }
   
-  return { valid: true };
+  // If no collision, allow insert
+  if (affectedClips.length === 0) {
+    return { valid: true, mode: 'insert', affectedClips: [] };
+  }
+  
+  // OVERWRITE MODE: Allow if explicitly requested
+  // This happens when you drag ON TOP of another clip
+  if (mode === 'overwrite') {
+    return { 
+      valid: true, 
+      mode: 'overwrite', 
+      affectedClips,
+      message: `Will overwrite ${affectedClips.length} clip(s)`
+    };
+  }
+  
+  // INSERT MODE: Block collision
+  return { 
+    valid: false, 
+    reason: `Collision with ${affectedClips[0].id}`,
+    collidingClip: affectedClips[0],
+    affectedClips
+  };
 };
 
 /**

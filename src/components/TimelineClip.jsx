@@ -20,6 +20,7 @@ const TimelineClip = ({
   const [dragStart, setDragStart] = useState({ x: 0, time: 0 });
   const [hoverEdge, setHoverEdge] = useState(null);
   const [snapIndicator, setSnapIndicator] = useState(null);
+  const [overwriteMode, setOverwriteMode] = useState(false);
 
   // Calculate position and size
   // Scale is pixels per second
@@ -29,9 +30,6 @@ const TimelineClip = ({
   // Get track info
   const track = tracks.find(t => t.id === clip.track);
   const isLocked = track?.locked || false;
-
-  // Debug
-  console.log(`Clip ${clip.id}: left=${clipLeft}px, width=${clipWidth}px, scale=${scale}`);
 
   // Handle mouse down - start drag/trim
   const handleMouseDown = (e, type) => {
@@ -61,15 +59,20 @@ const TimelineClip = ({
       const deltaX = e.clientX - dragStart.x;
       const deltaTime = deltaX / scale;
 
+      // Check for OVERWRITE mode (Ctrl/Cmd key)
+      const isOverwrite = e.ctrlKey || e.metaKey;
+      setOverwriteMode(isOverwrite);
+
       if (dragType === 'move') {
         let newTime = Math.max(0, dragStart.time + deltaTime); // Prevent negative time
 
-        // Snap if enabled
+        // MAGNETIC SNAP if enabled
         if (snapEnabled) {
           const snap = ClipInteractions.findSnapPoint(
             clip,
             allClips,
-            newTime
+            newTime,
+            1.0 // Full magnetic strength
           );
 
           if (snap) {
@@ -80,19 +83,22 @@ const TimelineClip = ({
           }
         }
 
-        // Validate move
+        // Validate move (INSERT or OVERWRITE)
+        const moveMode = isOverwrite ? 'overwrite' : 'insert';
         const validation = ClipInteractions.validateClipMove(
           clip,
           newTime,
           clip.track,
           allClips,
-          tracks
+          tracks,
+          moveMode
         );
 
         if (validation.valid) {
-          onMove(clip.id, newTime, clip.track);
-        } else {
-          console.warn('Invalid move:', validation.reason);
+          onMove(clip.id, newTime, clip.track, validation);
+        } else if (moveMode === 'insert') {
+          // In INSERT mode, blocked by collision
+          console.warn('Insert blocked:', validation.reason);
         }
 
       } else if (dragType === 'trim-start' || dragType === 'trim-end') {
@@ -166,13 +172,15 @@ const TimelineClip = ({
           absolute top-1 bottom-1 rounded overflow-hidden
           border-2 transition-all
           ${isSelected ? 'border-yellow-400' : 'border-transparent'}
+          ${overwriteMode && isDragging ? 'ring-2 ring-red-500' : ''}
           ${getClipColor()}
           ${isLocked ? 'opacity-50' : 'opacity-100'}
         `}
         style={{
           left: `${clipLeft}px`,
           width: `${clipWidth}px`,
-          cursor: getCursor()
+          cursor: getCursor(),
+          opacity: overwriteMode && isDragging ? 0.7 : 1
         }}
         onMouseDown={(e) => handleMouseDown(e, 'move')}
         onMouseMove={handleMouseMove}
@@ -214,15 +222,22 @@ const TimelineClip = ({
         )}
       </div>
 
-      {/* Snap indicator */}
-      {snapIndicator && (
+      {/* Snap indicator - MAGNETIC */}
+      {snapIndicator && !overwriteMode && (
         <div
-          className="absolute top-0 bottom-0 w-0.5 bg-yellow-400 pointer-events-none z-50"
+          className="absolute top-0 bottom-0 w-0.5 bg-yellow-400 pointer-events-none z-50 animate-pulse"
           style={{ left: `${snapIndicator.time * scale}px` }}
         >
-          <div className="absolute -top-2 left-1/2 transform -translate-x-1/2 bg-yellow-400 text-black text-[10px] px-1 rounded whitespace-nowrap">
-            SNAP
+          <div className="absolute -top-2 left-1/2 transform -translate-x-1/2 bg-yellow-400 text-black text-[10px] px-1 rounded whitespace-nowrap font-bold">
+            🧲 SNAP
           </div>
+        </div>
+      )}
+
+      {/* Overwrite mode indicator */}
+      {overwriteMode && isDragging && (
+        <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-red-600 text-white text-xs px-2 py-1 rounded whitespace-nowrap font-bold z-50">
+          ⚠️ OVERWRITE MODE
         </div>
       )}
     </>
