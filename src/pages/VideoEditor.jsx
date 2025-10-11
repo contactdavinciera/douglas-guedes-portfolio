@@ -9,6 +9,7 @@ import MaestroPlayer from '@/services/maestroPlayer';
 import MaestroWaveform from '@/components/MaestroWaveform';
 import MaestroScrubber from '@/components/MaestroScrubber';
 import MediaImportDialog from '@/components/MediaImportDialog';
+import ProjectSettingsDialog from '@/components/ProjectSettingsDialog';
 import * as EditingFunctions from '@/services/editingFunctions';
 import {
   ResizableHandle,
@@ -70,6 +71,13 @@ const VideoEditor = () => {
   const [outPoint, setOutPoint] = useState(null); // OUT point for selection
   const [copiedSelection, setCopiedSelection] = useState(null); // Copied IN/OUT range
   const [showImportDialog, setShowImportDialog] = useState(false); // Media import modal
+  const [showProjectSettings, setShowProjectSettings] = useState(false); // Project settings dialog
+  const [projectSettings, setProjectSettings] = useState({
+    framerate: 24,
+    colorSpace: 'SDR',
+    resolution: '1920x1080',
+    timecodeStart: '00:00:00:00'
+  });
   const [markers, setMarkers] = useState([
     { id: 'm1', time: 30, color: 'red', label: 'Start Scene 1', type: 'comment' },
     { id: 'm2', time: 75, color: 'green', label: 'Music Cue', type: 'audio' },
@@ -386,10 +394,30 @@ const VideoEditor = () => {
     const clipId = e.dataTransfer.getData('clipId');
     if (!clipId) return;
 
+    const clip = timelineClips.find(c => c.id === clipId);
+    if (!clip) return;
+
+    // Get clip type (video or audio)
+    const media = mediaBins.find(m => m.id === clip.mediaId);
+    const clipType = media?.type || 'video';
+
+    // Get target track type
+    const targetTrackObj = tracks.find(t => t.id === targetTrack);
+    const targetType = targetTrackObj?.type;
+
+    // VALIDATION: Video clips can only go to video tracks, audio to audio tracks
+    if (clipType !== targetType) {
+      console.warn(`❌ Cannot drop ${clipType} clip on ${targetType} track!`);
+      alert(`Cannot place ${clipType.toUpperCase()} clips on ${targetType.toUpperCase()} tracks!`);
+      return;
+    }
+
     // Move clip to new track
-    setTimelineClips(prev => prev.map(clip => 
-      clip.id === clipId ? { ...clip, track: targetTrack } : clip
+    setTimelineClips(prev => prev.map(c => 
+      c.id === clipId ? { ...c, track: targetTrack } : c
     ));
+    
+    console.log(`✅ Moved ${clipType} clip to ${targetTrack}`);
   };
 
   // Move clip up/down layers (Alt + Arrow)
@@ -713,11 +741,23 @@ const VideoEditor = () => {
           break;
         case 'arrowup': // Arrow Up - Jump to previous clip start
           e.preventDefault();
-          jumpToPreviousClip();
+          EditingFunctions.jumpToClip(
+            'prev',
+            currentTime,
+            timelineClips,
+            setCurrentTime,
+            setSelectedClip
+          );
           break;
         case 'arrowdown': // Arrow Down - Jump to next clip start
           e.preventDefault();
-          jumpToNextClip();
+          EditingFunctions.jumpToClip(
+            'next',
+            currentTime,
+            timelineClips,
+            setCurrentTime,
+            setSelectedClip
+          );
           break;
         case 'arrowleft': // Arrow Left - Previous frame
           e.preventDefault();
@@ -732,17 +772,63 @@ const VideoEditor = () => {
           setPlaybackSpeed(1);
           setIsPlaying(true);
           break;
-        case 'i': // I - Set in point
+        case 'i': // I - Set IN point
           e.preventDefault();
-          console.log('Set in point:', currentTime);
+          EditingFunctions.setInPoint(currentTime, (updater) => {
+            const newState = updater({ inPoint, outPoint });
+            setInPoint(newState.inPoint);
+          });
           break;
-        case 'o': // O - Set out point
+        case 'o': // O - Set OUT point
           e.preventDefault();
-          console.log('Set out point:', currentTime);
+          EditingFunctions.setOutPoint(currentTime, (updater) => {
+            const newState = updater({ inPoint, outPoint });
+            setOutPoint(newState.outPoint);
+          });
           break;
-        case 'c': // C - Cut/Split
-          e.preventDefault();
-          handleSplitClip();
+        case 'b': // Ctrl+B - Razor cut at playhead
+          if (e.ctrlKey || e.metaKey) {
+            e.preventDefault();
+            EditingFunctions.razorCut(
+              currentTime,
+              timelineClips,
+              setTimelineClips,
+              selectedClip ? [selectedClip] : null
+            );
+          }
+          break;
+        case 'c': // Ctrl+C - Copy selection
+          if (e.ctrlKey || e.metaKey) {
+            e.preventDefault();
+            EditingFunctions.copySelection(
+              inPoint,
+              outPoint,
+              timelineClips,
+              setCopiedSelection
+            );
+          }
+          break;
+        case 'v': // Ctrl+V or Ctrl+Shift+V - Paste
+          if (e.ctrlKey || e.metaKey) {
+            e.preventDefault();
+            if (e.shiftKey) {
+              // Insert (ripple)
+              EditingFunctions.pasteInsert(
+                copiedSelection,
+                currentTime,
+                timelineClips,
+                setTimelineClips
+              );
+            } else {
+              // Overwrite
+              EditingFunctions.pasteOverwrite(
+                copiedSelection,
+                currentTime,
+                timelineClips,
+                setTimelineClips
+              );
+            }
+          }
           break;
         case 'm': // M - Add marker
           e.preventDefault();
@@ -760,7 +846,21 @@ const VideoEditor = () => {
         case 'delete':
         case 'backspace':
           e.preventDefault();
-          handleDeleteClip();
+          // If IN/OUT set, ripple delete between them
+          if (inPoint !== null && outPoint !== null) {
+            EditingFunctions.rippleDelete(
+              inPoint,
+              outPoint,
+              timelineClips,
+              setTimelineClips
+            );
+            // Clear IN/OUT after delete
+            setInPoint(null);
+            setOutPoint(null);
+          } else {
+            // Regular clip delete
+            handleDeleteClip();
+          }
           break;
         case '+':
         case '=':
@@ -782,20 +882,23 @@ const VideoEditor = () => {
     return () => window.removeEventListener('keydown', handleKeyPress);
   }, [isPlaying, currentTime, selectedClip, snapToGrid]);
 
-  // Playback loop - Frame-accurate with requestAnimationFrame
+  // Playback loop - Frame-accurate with PROJECT FRAMERATE
   useEffect(() => {
     if (!isPlaying) return;
 
     let animationFrameId;
     let lastTime = performance.now();
-    const frameTime = 1000 / 24; // 24fps = ~41.67ms per frame
+    const fps = projectSettings.framerate;
+    const frameTime = 1000 / fps; // Dynamic framerate from project settings
+
+    console.log(`▶️ Playing at ${fps} fps (${frameTime.toFixed(2)}ms per frame)`);
 
     const animate = (currentPerformanceTime) => {
       const deltaTime = currentPerformanceTime - lastTime;
 
       if (deltaTime >= frameTime) {
         setCurrentTime(prev => {
-          const next = prev + (playbackSpeed * 1/24); // 1 frame step
+          const next = prev + (playbackSpeed * (1 / fps)); // 1 frame step at project FPS
           if (next >= duration || next < 0) {
             setIsPlaying(false);
             return prev;
@@ -816,7 +919,7 @@ const VideoEditor = () => {
         cancelAnimationFrame(animationFrameId);
       }
     };
-  }, [isPlaying, playbackSpeed, duration]);
+  }, [isPlaying, playbackSpeed, duration, projectSettings.framerate]);
 
   return (
     <div className="min-h-screen bg-[#1a1a1a] pt-20 pb-6 px-4">
@@ -1348,6 +1451,37 @@ const VideoEditor = () => {
                       </div>
                     </div>
                     ))}
+                    
+                    {/* IN/OUT Selection Range */}
+                    {inPoint !== null && outPoint !== null && (
+                      <div
+                        className="maestro-in-out-range"
+                        style={{
+                          left: `${(inPoint / duration) * 100 * zoomLevel}%`,
+                          width: `${((outPoint - inPoint) / duration) * 100 * zoomLevel}%`,
+                        }}
+                      />
+                    )}
+                    
+                    {/* IN Marker */}
+                    {inPoint !== null && (
+                      <div
+                        className="maestro-in-marker"
+                        style={{
+                          left: `${(inPoint / duration) * 100 * zoomLevel}%`,
+                        }}
+                      />
+                    )}
+                    
+                    {/* OUT Marker */}
+                    {outPoint !== null && (
+                      <div
+                        className="maestro-out-marker"
+                        style={{
+                          left: `${(outPoint / duration) * 100 * zoomLevel}%`,
+                        }}
+                      />
+                    )}
                     
                     {/* Maestro Playhead - ALWAYS ON TOP! Rendered LAST */}
                     <div
