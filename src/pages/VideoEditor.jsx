@@ -496,9 +496,9 @@ const VideoEditor = () => {
   }, [isPlaying, playbackSpeed, duration]);
 
   return (
-    <div className="fixed inset-0 bg-[#1a1a1a] flex items-center justify-center p-4">
-      {/* Main Editor Container - Optimized layout */}
-      <div className="w-[95vw] h-[95vh] bg-[#262626] rounded-lg overflow-hidden shadow-2xl flex flex-col">
+    <div className="min-h-screen bg-[#1a1a1a] pt-20 pb-6 px-4">
+      {/* Main Editor Container - Below header */}
+      <div className="w-full max-w-[98vw] h-[calc(100vh-7rem)] mx-auto bg-[#262626] rounded-lg overflow-hidden shadow-2xl flex flex-col">
         
         {/* Top Bar */}
         <div className="h-12 bg-[#1a1a1a] border-b border-gray-700 flex items-center justify-between px-4">
