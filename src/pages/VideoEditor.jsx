@@ -12,8 +12,10 @@ import MediaImportDialog from '@/components/MediaImportDialog';
 import ProjectSettingsDialog from '@/components/ProjectSettingsDialog';
 import TimelineRuler from '@/components/TimelineRuler';
 import TimelineClip from '@/components/TimelineClip';
+import FixedPlayhead from '@/components/FixedPlayhead';
 import * as EditingFunctions from '@/services/editingFunctions';
 import * as ClipInteractions from '@/services/clipInteractions';
+import * as TimelineArch from '@/services/timelineArchitecture';
 import {
   ResizableHandle,
   ResizablePanel,
@@ -51,6 +53,7 @@ const VideoEditor = () => {
   const [zoomLevel, setZoomLevel] = useState(1);
   const [selectedClip, setSelectedClip] = useState(null);
   const [snapToGrid, setSnapToGrid] = useState(true);
+  const [timelineStartTC, setTimelineStartTC] = useState('00:00:00:00'); // Timeline start timecode
   const [timelineClips, setTimelineClips] = useState([
     { id: 'clip1', mediaId: 1, track: 'v1', startTime: 10, duration: 30, inPoint: 0, outPoint: 30 },
     { id: 'clip2', mediaId: 2, track: 'v1', startTime: 45, duration: 25, inPoint: 0, outPoint: 25 },
@@ -321,6 +324,26 @@ const VideoEditor = () => {
     // Store interval ID to clear later
     setTranscodeJobs(prev => [...prev, { jobId, intervalId }]);
   };
+
+  // SYNC SCROLL TO KEEP PLAYHEAD CENTERED
+  useEffect(() => {
+    if (!timelineRef.current) return;
+    
+    const timeline = timelineRef.current;
+    const viewportWidth = timeline.clientWidth;
+    
+    // Calculate scroll position to center playhead
+    const scrollLeft = TimelineArch.calculateScrollOffset(
+      currentTime,
+      zoomLevel,
+      viewportWidth,
+      0 // startTime
+    );
+    
+    // Smooth scroll to center playhead
+    timeline.scrollLeft = Math.max(0, scrollLeft);
+    
+  }, [currentTime, zoomLevel]); // Re-center when time or zoom changes
 
   // Initialize Maestro Player
   useEffect(() => {
