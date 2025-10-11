@@ -1,0 +1,40 @@
+# Arquivo para rodar tudo com Docker Compose
+version: '3.8'
+
+services:
+  # Backend Flask
+  backend:
+    build: ./color-studio-backend
+    container_name: douglas-guedes-backend
+    ports:
+      - "5001:5000"
+    environment:
+      - FLASK_APP=src/main.py
+      - FLASK_ENV=development
+      - FLASK_DEBUG=1
+    env_file:
+      - .env
+    volumes:
+      - ./color-studio-backend/src:/app/src
+      - ./color-studio-backend/uploads:/app/uploads
+    networks:
+      - douglas-network
+    restart: unless-stopped
+
+  # Frontend (opcional - para produção)
+  # frontend:
+  #   build: .
+  #   container_name: douglas-guedes-frontend
+  #   ports:
+  #     - "5173:80"
+  #   depends_on:
+  #     - backend
+  #   networks:
+  #     - douglas-network
+
+networks:
+  douglas-network:
+    driver: bridge
+
+# NOTA: Supabase já está rodando separadamente no Docker
+# Este compose é apenas para o Backend Flask

@@ -99,7 +99,9 @@ const ProColorGradingStudio = () => {
         setCurrentProject(data[0]);
       }
     } catch (error) {
-      console.error('Error loading projects:', error);
+      console.log('Modo DEMO: Iniciando sem projetos');
+      // Modo demo - sem projetos iniciais
+      setProjects([]);
     }
   };
 
@@ -138,18 +140,36 @@ const ProColorGradingStudio = () => {
       const library = await lutApi.listLibrary();
       setLutLibrary(library);
     } catch (error) {
-      console.error('Error loading LUT library:', error);
+      console.log('Modo DEMO: Biblioteca de LUTs vazia');
+      setLutLibrary([]);
     }
   };
 
   const handleCreateProject = async () => {
     try {
-      const newProject = await projectApi.create({
+      // Modo DEMO - criar projeto localmente
+      const newProject = {
+        id: Date.now().toString(),
         name: newProjectName,
         format: newProjectFormat,
         client_id: userId,
-        colorist_id: null
-      });
+        colorist_id: null,
+        status: 'draft',
+        created_at: new Date().toISOString()
+      };
+
+      // Tentar salvar no Supabase, mas continuar mesmo se falhar
+      try {
+        const savedProject = await projectApi.create({
+          name: newProjectName,
+          format: newProjectFormat,
+          client_id: userId,
+          colorist_id: null
+        });
+        newProject.id = savedProject.id;
+      } catch (dbError) {
+        console.log('Modo DEMO: Projeto criado apenas localmente');
+      }
 
       setProjects([newProject, ...projects]);
       setCurrentProject(newProject);

@@ -21,6 +21,9 @@ const Header = () => {
     { name: 'Sobre', href: '/about' },
     { name: 'Serviços', href: '/services' },
     { name: 'Color Studio', href: '/color-studio' },
+    { name: 'Video Editor', href: '/video-editor', isPro: true },
+    { name: 'Pricing', href: '/pricing', isPro: true },
+    { name: 'Maestro', href: '/maestro', isPro: true },
     { name: 'Contato', href: '/contact' }
   ]
 
@@ -72,9 +75,14 @@ const Header = () => {
                   isActive(item.href)
                     ? 'text-white'
                     : 'text-gray-400 hover:text-white'
-                }`}
+                } ${item.isPro ? 'flex items-center gap-1' : ''}`}
               >
                 {item.name}
+                {item.isPro && (
+                  <span className="px-1.5 py-0.5 text-[10px] font-bold bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded uppercase tracking-wider">
+                    Pro
+                  </span>
+                )}
                 
                 {/* Active indicator */}
                 <span 
@@ -130,13 +138,18 @@ const Header = () => {
                   setIsMenuOpen(false)
                 }}
                 style={{ animationDelay: `${index * 50}ms` }}
-                className={`block px-4 py-3 text-sm font-medium transition-all duration-200 rounded-lg ${
+                className={`flex items-center justify-between px-4 py-3 text-sm font-medium transition-all duration-200 rounded-lg ${
                   isActive(item.href)
                     ? 'text-white bg-gradient-to-r from-blue-600/30 to-purple-600/30 border border-blue-500/30'
                     : 'text-gray-300 hover:text-white hover:bg-white/5'
                 } ${isMenuOpen ? 'animate-fade-in-up' : ''}`}
               >
-                {item.name}
+                <span>{item.name}</span>
+                {item.isPro && (
+                  <span className="px-2 py-0.5 text-[10px] font-bold bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded uppercase tracking-wider">
+                    Pro
+                  </span>
+                )}
               </a>
             ))}
             
