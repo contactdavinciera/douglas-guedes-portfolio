@@ -476,8 +476,8 @@ const VideoEditor = () => {
 
   return (
     <div className="fixed inset-0 bg-[#1a1a1a] flex items-center justify-center p-4">
-      {/* Main Editor Container - 16:9 aspect ratio */}
-      <div className="w-[90vw] h-[90vh] bg-[#262626] rounded-lg overflow-hidden shadow-2xl flex flex-col">
+      {/* Main Editor Container - Optimized layout */}
+      <div className="w-[95vw] h-[95vh] bg-[#262626] rounded-lg overflow-hidden shadow-2xl flex flex-col">
         
         {/* Top Bar */}
         <div className="h-12 bg-[#1a1a1a] border-b border-gray-700 flex items-center justify-between px-4">
@@ -517,12 +517,12 @@ const VideoEditor = () => {
           
           <ResizablePanelGroup direction="vertical" className="flex-1">
             
-            {/* Top Section - Viewers + Media Pool */}
-            <ResizablePanel defaultSize={65} minSize={40}>
+            {/* Top Section - Viewers + Media Pool - Reduced height */}
+            <ResizablePanel defaultSize={50} minSize={35}>
               <ResizablePanelGroup direction="horizontal">
                 
-                {/* Media Pool / Bins + Effects */}
-                <ResizablePanel defaultSize={20} minSize={15}>
+                {/* Media Pool / Bins + Effects - Increased size */}
+                <ResizablePanel defaultSize={22} minSize={18}>
                   <div className="h-full bg-[#1e1e1e] border-r border-gray-700 flex flex-col">
                     <div className="h-10 bg-[#252525] border-b border-gray-700 flex items-center justify-between px-3">
                       <div className="flex gap-2">
@@ -540,21 +540,21 @@ const VideoEditor = () => {
                         </button>
                       </div>
                     </div>
-                    <div className="flex-1 overflow-y-auto p-2 space-y-2">
+                    <div className="flex-1 overflow-y-auto p-3 space-y-3">
                       {!showEffectsPanel ? (
-                        // Media Pool
+                        // Media Pool - Larger thumbnails
                         mediaBins.map(item => (
                           <div
                             key={item.id}
-                            className="bg-[#2a2a2a] rounded p-2 cursor-grab active:cursor-grabbing hover:bg-[#333] transition-colors border border-gray-700"
+                            className="bg-[#2a2a2a] rounded p-3 cursor-grab active:cursor-grabbing hover:bg-[#333] transition-colors border border-gray-700"
                             draggable
                             onDragStart={(e) => handleDragStart(e, item)}
                           >
-                            <div className="aspect-video bg-[#1a1a1a] rounded mb-2 flex items-center justify-center">
-                              <span className="text-gray-500 text-xs">{item.type === 'video' ? '🎬' : '🎵'}</span>
+                            <div className="aspect-video bg-[#1a1a1a] rounded mb-3 flex items-center justify-center">
+                              <span className="text-gray-500 text-2xl">{item.type === 'video' ? '🎬' : '🎵'}</span>
                             </div>
-                            <div className="text-xs text-gray-300 truncate">{item.name}</div>
-                            <div className="text-xs text-gray-500">{formatTimecode(item.duration)}</div>
+                            <div className="text-sm text-gray-300 truncate font-medium">{item.name}</div>
+                            <div className="text-xs text-gray-500 mt-1">{formatTimecode(item.duration)}</div>
                           </div>
                         ))
                       ) : (
@@ -682,8 +682,8 @@ const VideoEditor = () => {
 
             <ResizableHandle withHandle />
 
-            {/* Bottom Section - Timeline */}
-            <ResizablePanel defaultSize={35} minSize={25}>
+            {/* Bottom Section - Timeline - Increased space */}
+            <ResizablePanel defaultSize={50} minSize={35}>
               <div className="h-full bg-[#1e1e1e] flex flex-col">
                 
                 {/* Timeline Header */}
