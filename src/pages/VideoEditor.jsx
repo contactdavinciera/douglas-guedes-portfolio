@@ -941,9 +941,14 @@ const VideoEditor = () => {
           <div className="flex items-center gap-4">
             <span className="text-white font-semibold text-lg">🎼 Maestro</span>
             <div className="flex gap-2">
-              <Button size="sm" variant="ghost" className="text-gray-400 hover:text-white hover:bg-[#2a2a2a]">
-                <FolderOpen className="w-4 h-4 mr-2" />
-                New Project
+              <Button 
+                size="sm" 
+                variant="ghost" 
+                className="text-gray-400 hover:text-white hover:bg-[#2a2a2a]"
+                onClick={() => setShowProjectSettings(true)}
+              >
+                <Settings className="w-4 h-4 mr-2" />
+                Project Settings
               </Button>
               <Button 
                 size="sm" 
@@ -1620,6 +1625,27 @@ const VideoEditor = () => {
         </div>
 
       </div>
+
+      {/* Project Settings Dialog */}
+      <ProjectSettingsDialog
+        isOpen={showProjectSettings}
+        onClose={() => setShowProjectSettings(false)}
+        onSave={(settings) => {
+          setProjectSettings(settings);
+          console.log('📐 Project settings updated:', settings);
+        }}
+        currentSettings={projectSettings}
+      />
+
+      {/* Media Import Dialog */}
+      <MediaImportDialog
+        isOpen={showImportDialog}
+        onClose={() => setShowImportDialog(false)}
+        onImport={(file, mediaInfo) => {
+          console.log('📁 Importing file:', file.name, mediaInfo);
+          // Handle file import logic here
+        }}
+      />
     </div>
   );
 };
