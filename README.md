@@ -2,7 +2,45 @@
 
 Professional web-based video editing application with advanced color grading capabilities.
 
-## Quick Start
+---
+
+## 🚀 Quick Start (3 Simple Steps)
+
+### Step 1: Clone the Repository
+```bash
+git clone https://github.com/contactdavinciera/douglas-guedes-portfolio.git
+cd douglas-guedes-portfolio
+```
+
+### Step 2: Start the Servers
+```bash
+# Linux/macOS - Start both servers at once
+./start-servers.sh
+
+# OR start them separately
+./start-backend.sh     # Terminal 1
+./start-frontend.sh    # Terminal 2
+
+# Windows
+start-backend.bat      # Terminal 1
+start-frontend.bat     # Terminal 2
+```
+
+### Step 3: Open the Application
+Open http://localhost:5173 in your browser
+
+---
+
+## 📖 For First-Time Users
+
+**New to the project?** Start here:
+1. Read [QUICK_START.md](./QUICK_START.md) - Simple 3-step guide
+2. Check [DEVELOPER.md](./DEVELOPER.md) - Complete setup guide
+3. Run `./start-servers.sh` - Start coding!
+
+---
+
+## Alternative: Manual Setup
 
 ### Starting the Servers
 
